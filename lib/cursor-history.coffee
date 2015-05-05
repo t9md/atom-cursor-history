@@ -20,6 +20,12 @@ class CursorHistory
   get: (index) ->
     @history[index]
 
+  # lastReturned: ->
+  #   @history[index]
+
+  peek: ->
+    @history[@index]
+
   add: (cursor) ->
     if @index + 1 >= @max
       console.log 'max'

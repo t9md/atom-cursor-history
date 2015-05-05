@@ -20,6 +20,23 @@ module.exports =
       'cursor-history:prev': => @prev()
       'cursor-history:add': => @add()
 
+
+    # Essential: Calls your `callback` when a {Cursor} is moved. If there are
+    # multiple cursors, your callback will be called for each cursor.
+    #
+    # * `callback` {Function}
+    #   * `event` {Object}
+    #     * `oldBufferPosition` {Point}
+    #     * `oldScreenPosition` {Point}
+    #     * `newBufferPosition` {Point}
+    #     * `newScreenPosition` {Point}
+    #     * `textChanged` {Boolean}
+    #     * `cursor` {Cursor} that triggered the event
+    #
+    # Returns a {Disposable} on which `.dispose()` can be called to unsubscribe.
+    @subscriptions.add atom.workspace.observeTextEditors (editor) =>
+      @subscriptions.add editor.onDidChangeCursorPosition (event) => @add(event)
+
   deactivate: ->
     @subscriptions.dispose()
     @history?.destroy()
@@ -39,8 +56,12 @@ module.exports =
   setCursorPosition: (pos) ->
     @getCursor().setBufferPosition pos
 
-  add: ->
-    @history.add @getCursorPosition()
+  add: ({oldBufferPosition, newBufferPosition}) ->
+    if Math.abs(oldBufferPosition.row - newBufferPosition.row) < 4
+      return
+    # if newBufferPosition.isEqual @history.peek()
+      # return
+    @history.add oldBufferPosition
     console.log @history.dump()
 
   next: ->

@@ -1,3 +1,5 @@
+# DON'T USE NOW
+
 # cursor-history
 
 Jump to next and previous cursor position by remembering cursor position history.
