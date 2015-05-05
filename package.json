@@ -1,0 +1,20 @@
+{
+  "name": "cursor-history",
+  "main": "./lib/main",
+  "version": "0.0.0",
+  "description": "Cursor position history manager",
+  "activationCommands": {
+    "atom-workspace": [
+      "cursor-history:next",
+      "cursor-history:prev",
+      "cursor-history:add"
+    ]
+  },
+  "repository": "https://github.com/t9md/atom-cursor-history",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=0.174.0 <2.0.0"
+  },
+  "dependencies": {
+  }
+}

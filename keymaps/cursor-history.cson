@@ -1,0 +1,7 @@
+# https://atom.io/docs/latest/behind-atom-keymaps-in-depth
+# Chose your preference, I don't want to set default keymap,
+# since it's easily conflict to others.
+
+'atom-workspace':
+  'ctrl-i': 'cursor-history:next'
+  'ctrl-o': 'cursor-history:prev'
