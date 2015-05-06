@@ -10,9 +10,18 @@ Jump to next and previous cursor position by remembering cursor position history
 
 No keymap by default.
 
-e.g.
+* e.g.
+
 ```coffeescript
 'atom-workspace':
+  'ctrl-i': 'cursor-history:next'
+  'ctrl-o': 'cursor-history:prev'
+```
+
+* if you use [vim-mode](https://atom.io/packages/vim-mode)
+
+```coffeescript
+'atom-text-editor.vim-mode.command-mode':
   'ctrl-i': 'cursor-history:next'
   'ctrl-o': 'cursor-history:prev'
 ```
@@ -30,7 +39,7 @@ Currently when the row delata between old cursor position and new exceeds `rowDe
 I have some idea to make this more granular way.
 
 # TODO
-[ ] Use Maker instead of buffer position.
-[ ] Support serialization to support per-project cursor history.
-[ ] More precise handling when active TextEditor change
-[ ] Make configurable when history is saved.
+- [ ] Use Maker instead of buffer position.
+- [ ] Support serialization to support per-project cursor history.
+- [ ] More precise handling when active TextEditor change
+- [ ] Make configurable when history is saved.

@@ -12,13 +12,13 @@ class CursorHistory
 
   next: ->
     if @index is @entries.length - 1
-      console.log "newest"
+      # console.log "newest"
       return
     @get(@index + 1)
 
   prev: ->
     if @index is 0
-      console.log "oldest"
+      # console.log "oldest"
       return
     @get(@index - 1)
 
