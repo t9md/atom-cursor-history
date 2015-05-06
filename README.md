@@ -39,7 +39,7 @@ Currently when the row delata between old cursor position and new exceeds `rowDe
 I have some idea to make this more granular way.
 
 # TODO
-- [ ] Use Maker instead of buffer position.
+- [x] Use Maker instead of buffer position.
 - [ ] Support serialization to support per-project cursor history.
 - [ ] More precise handling when active TextEditor change
 - [ ] Make configurable when history is saved.

@@ -1,5 +1,5 @@
-{CompositeDisposable, Point} = require 'atom'
-CursorHistory = require './cursor-history'
+{CompositeDisposable} = require 'atom'
+CursorHistory = require './history'
 
 module.exports =
   history: null
@@ -35,7 +35,7 @@ module.exports =
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
 
-  # dump: -> @history.dump()
+  # dump: -> console.log @direction
 
   deactivate: ->
     @subscriptions.dispose()
@@ -44,21 +44,25 @@ module.exports =
   serialize: ->
     @history?.serialize()
 
-  handleCursorMoved: (event) ->
+  handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
     if @direction is 'next' or @direction is 'prev'
       @direction = null
       return
 
-    return unless @needRemember.bind(@)(event)
+    return if cursor.editor.hasMultipleCursors()
+    return unless @needRemember.bind(@)(oldBufferPosition, newBufferPosition, cursor)
+
     # console.log "Remember"
-    @history.add
-      point: event.newBufferPosition
-      URI: event.cursor.editor.getURI()
 
-  needRemember: ({oldBufferPosition, newBufferPosition, cursor}) ->
-    if cursor.editor.hasMultipleCursors()
-      return false
+    # [FIXME] currently buffer without URI is simply ignored.
+    # is there any way to support 'untitled' buffer?
+    URI = cursor.editor.getURI()
+    return unless URI
 
+    marker = cursor.editor.markBufferPosition(newBufferPosition, {invalidate: 'never', persistent: false})
+    @history.add {marker: marker, URI: URI}
+
+  needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     # [FIXME] handle active editor change.
     if Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
       return true
@@ -70,8 +74,9 @@ module.exports =
 
   jump: (@direction) ->
     entry = @history[@direction]()
-    return unless entry
-    {URI, point} = entry
-
+    unless entry
+      @direction = null
+      return
+    {URI, marker} = entry
     atom.workspace.open(URI, searchAllPanes: true).done (editor) =>
-      editor.setCursorBufferPosition point
+      editor.setCursorBufferPosition marker.getStartBufferPosition()

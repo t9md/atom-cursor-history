@@ -1,5 +1,4 @@
-CursorHistory = require '../lib/cursor-history'
-{Point} = require "atom"
+CursorHistory = require '../lib/history'
 
 describe "CursorHistory", ->
   [cursorHistory] = []

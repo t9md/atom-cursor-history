@@ -1,5 +1,5 @@
 module.exports =
-class CursorHistory
+class History
   constructor: (max) ->
     @initialize(max)
 
@@ -10,14 +10,20 @@ class CursorHistory
     @entries = []
     @max     = max
 
+  isNewest: ->
+    @entries.length is 0 or @index is @entries.length - 1
+
+  isOldest: ->
+    @entries.length is 0 or @index is 0
+
   next: ->
-    if @index is @entries.length - 1
+    if @isNewest()
       # console.log "newest"
       return
     @get(@index + 1)
 
   prev: ->
-    if @index is 0
+    if @isOldest()
       # console.log "oldest"
       return
     @get(@index - 1)
@@ -29,7 +35,13 @@ class CursorHistory
     return if @index + 1 is @max
     @index = @index + 1
     @entries[@index] = entry
-    @entries.length = @index + 1
+
+    newLength = @index + 1
+    return if newLength >= @entries.length
+
+    entries = @entries.splice(newLength, @entries.length - newLength)
+    for {marker} in entries
+      marker.destroy()
 
   dump: ->
     console.log [ @entries, @index, @entries.length ]
