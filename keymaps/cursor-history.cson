@@ -5,3 +5,5 @@
 'atom-workspace':
   'ctrl-i': 'cursor-history:next'
   'ctrl-o': 'cursor-history:prev'
+  'f7': 'cursor-history:reset'
+  'f8': 'cursor-history:dump'

@@ -1,62 +1,37 @@
 CursorHistory = require '../lib/cursor-history'
-
-# Use the command `window:run-package-specs` (cmd-alt-ctrl-p) to run specs.
-#
-# To run a specific `it` or `describe` block add an `f` to the front (e.g. `fit`
-# or `fdescribe`). Remove the `f` to unfocus the block.
+{Point} = require "atom"
 
 describe "CursorHistory", ->
-  [workspaceElement, activationPromise] = []
+  [cursorHistory] = []
 
   beforeEach ->
-    workspaceElement = atom.views.getView(atom.workspace)
-    activationPromise = atom.packages.activatePackage('cursor-history')
+    cursorHistory = new CursorHistory
 
-  describe "when the cursor-history:toggle event is triggered", ->
-    it "hides and shows the modal panel", ->
-      # Before the activation event the view is not on the DOM, and no panel
-      # has been created
-      expect(workspaceElement.querySelector('.cursor-history')).not.toExist()
+  describe "when the CursorHistory is initialized", ->
+    it "length is zero", ->
+      expect(cursorHistory.getLength()).toBe(0)
+    it "next() is undefined", ->
+      expect(cursorHistory.next()).toBe(undefined)
+    it "prev() is undefined", ->
+      expect(cursorHistory.prev()).toBe(undefined)
 
-      # This is an activation event, triggering it will cause the package to be
-      # activated.
-      atom.commands.dispatch workspaceElement, 'cursor-history:toggle'
+  describe "when two entries added", ->
+    p1 = new Point(1,1)
+    p2 = new Point(2,1)
+    p3 = new Point(3,1)
 
-      waitsForPromise ->
-        activationPromise
+    it "length is 2", ->
+      cursorHistory.add(p1)
+      cursorHistory.add(p2)
+      cursorHistory.add(p3)
+      expect(cursorHistory.getLength()).toBe(3)
 
-      runs ->
-        expect(workspaceElement.querySelector('.cursor-history')).toExist()
+      expect(cursorHistory.prev().isEqual(p3)).toBe(true)
+      expect(cursorHistory.prev().isEqual(p2)).toBe(true)
+      expect(cursorHistory.prev().isEqual(p1)).toBe(true)
+      expect(cursorHistory.prev()).toBe(undefined)
 
-        cursorHistoryElement = workspaceElement.querySelector('.cursor-history')
-        expect(cursorHistoryElement).toExist()
-
-        cursorHistoryPanel = atom.workspace.panelForItem(cursorHistoryElement)
-        expect(cursorHistoryPanel.isVisible()).toBe true
-        atom.commands.dispatch workspaceElement, 'cursor-history:toggle'
-        expect(cursorHistoryPanel.isVisible()).toBe false
-
-    it "hides and shows the view", ->
-      # This test shows you an integration test testing at the view level.
-
-      # Attaching the workspaceElement to the DOM is required to allow the
-      # `toBeVisible()` matchers to work. Anything testing visibility or focus
-      # requires that the workspaceElement is on the DOM. Tests that attach the
-      # workspaceElement to the DOM are generally slower than those off DOM.
-      jasmine.attachToDOM(workspaceElement)
-
-      expect(workspaceElement.querySelector('.cursor-history')).not.toExist()
-
-      # This is an activation event, triggering it causes the package to be
-      # activated.
-      atom.commands.dispatch workspaceElement, 'cursor-history:toggle'
-
-      waitsForPromise ->
-        activationPromise
-
-      runs ->
-        # Now we can test for view visibility
-        cursorHistoryElement = workspaceElement.querySelector('.cursor-history')
-        expect(cursorHistoryElement).toBeVisible()
-        atom.commands.dispatch workspaceElement, 'cursor-history:toggle'
-        expect(cursorHistoryElement).not.toBeVisible()
+      expect(cursorHistory.next().isEqual(p1)).toBe(true)
+      expect(cursorHistory.next().isEqual(p2)).toBe(true)
+      expect(cursorHistory.next().isEqual(p3)).toBe(true)
+      expect(cursorHistory.next()).toBe(undefined)

@@ -3,6 +3,7 @@ CursorHistory = require './cursor-history'
 
 module.exports =
   history: null
+  direction: null
   subscriptions: null
   config:
     max:
@@ -18,24 +19,14 @@ module.exports =
     atom.commands.add 'atom-workspace',
       'cursor-history:next': => @next()
       'cursor-history:prev': => @prev()
-      'cursor-history:add': => @add()
+      'cursor-history:add':  => @add()
+      'cursor-history:reset':  => @reset()
+      'cursor-history:dump':  => @dump()
 
-
-    # Essential: Calls your `callback` when a {Cursor} is moved. If there are
-    # multiple cursors, your callback will be called for each cursor.
-    #
-    # * `callback` {Function}
-    #   * `event` {Object}
-    #     * `oldBufferPosition` {Point}
-    #     * `oldScreenPosition` {Point}
-    #     * `newBufferPosition` {Point}
-    #     * `newScreenPosition` {Point}
-    #     * `textChanged` {Boolean}
-    #     * `cursor` {Cursor} that triggered the event
-    #
-    # Returns a {Disposable} on which `.dispose()` can be called to unsubscribe.
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
-      @subscriptions.add editor.onDidChangeCursorPosition (event) => @add(event)
+      @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
+
+  dump: -> @history.dump()
 
   deactivate: ->
     @subscriptions.dispose()
@@ -44,30 +35,33 @@ module.exports =
   serialize: ->
     @history?.serialize()
 
-  editor: ->
-    atom.workspace.getActiveTextEditor()
-
-  getCursor: ->
-    @editor().getCursor()
-
-  getCursorPosition: ->
-    @getCursor().getBufferPosition()
-
-  setCursorPosition: (pos) ->
-    @getCursor().setBufferPosition pos
-
-  add: ({oldBufferPosition, newBufferPosition}) ->
-    if Math.abs(oldBufferPosition.row - newBufferPosition.row) < 4
+  handleCursorMoved: (event) ->
+    # console.log cursor
+    if @direction is 'next' or @direction is 'prev'
+      @direction = null
       return
-    # if newBufferPosition.isEqual @history.peek()
-      # return
-    @history.add oldBufferPosition
-    console.log @history.dump()
 
-  next: ->
-    pos = @history.next()
-    @setCursorPosition pos if pos?
+    return unless @needRemember(event)
+    # console.log "Remember"
+    @history.add
+      point: event.newBufferPosition
+      URI: event.cursor.editor.getURI()
 
-  prev: ->
-    pos = @history.prev()
-    @setCursorPosition pos if pos?
+  needRemember: ({oldBufferPosition, newBufferPosition, cursor}) ->
+    if cursor.editor.hasMultipleCursors()
+      return false
+    if Math.abs(oldBufferPosition.row - newBufferPosition.row) >= 4
+      return true
+    return false
+
+  jump: (@direction) ->
+    entry = @history[@direction]()
+    return unless entry
+    {URI, point} = entry
+
+    atom.workspace.open(URI, split: 'right', searchAllPanes: true).done (editor) =>
+      editor.setCursorBufferPosition point
+
+  next: -> @jump('next')
+  prev: -> @jump('prev')
+  reset: -> @history.reset()
