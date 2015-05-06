@@ -3,7 +3,7 @@ class History
   constructor: (max) ->
     @initialize(max)
 
-  reset: -> @initialize(@max)
+  clear: -> @initialize(@max)
 
   initialize: (max) ->
     @index   = -1
@@ -15,6 +15,9 @@ class History
 
   isOldest: ->
     @entries.length is 0 or @index is 0
+
+  isEmpty: ->
+    @entries.length is 0
 
   next: ->
     if @isNewest()
@@ -30,6 +33,9 @@ class History
 
   get: (@index) ->
     @entries[@index]
+
+  getLastURI: ->
+    @get(@index)?.URI
 
   add: (entry) ->
     return if @index + 1 is @max

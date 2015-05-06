@@ -29,7 +29,7 @@ module.exports =
     atom.commands.add 'atom-workspace',
       'cursor-history:next': => @next()
       'cursor-history:prev': => @prev()
-      'cursor-history:reset':  => @reset()
+      'cursor-history:clear': => @clear()
       # 'cursor-history:dump':  => @dump()
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
@@ -54,29 +54,42 @@ module.exports =
 
     # console.log "Remember"
 
-    # [FIXME] currently buffer without URI is simply ignored.
-    # is there any way to support 'untitled' buffer?
-    URI = cursor.editor.getURI()
-    return unless URI
-
     marker = cursor.editor.markBufferPosition(newBufferPosition, {invalidate: 'never', persistent: false})
-    @history.add {marker: marker, URI: URI}
+    @history.add {marker: marker, URI: cursor.editor.getURI()}
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
-    # [FIXME] handle active editor change.
+    URI = cursor.editor.getURI()
+    unless URI
+      # [FIXME] currently buffer without URI is simply ignored.
+      # is there any way to support 'untitled' buffer?
+      return false
+
+    lastURI = @history.getLastURI()
+    if lastURI and lastURI isnt URI
+      # Should remember, if buffer path is defferent.
+      return true
+
     if Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
       return true
     return false
 
   next: -> @jump('next')
   prev: -> @jump('prev')
-  reset: -> @history.reset()
+  clear: -> @history.clear()
 
-  jump: (@direction) ->
-    entry = @history[@direction]()
-    unless entry
-      @direction = null
-      return
+  jump: (direction) ->
+    entry = @history[direction]()
+    return unless entry
+
+    activeEditor = atom.workspace.getActiveTextEditor()
+    return unless activeEditor
+
+    @direction = direction
     {URI, marker} = entry
+    pos = marker.getStartBufferPosition()
+    if activeEditor.getURI() is URI
+      activeEditor.setCursorBufferPosition pos
+      return
+
     atom.workspace.open(URI, searchAllPanes: true).done (editor) =>
-      editor.setCursorBufferPosition marker.getStartBufferPosition()
+      editor.setCursorBufferPosition pos

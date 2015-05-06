@@ -31,7 +31,7 @@ No keymap by default.
 Use following command or set Keymap.
 * `cursor-history:next`: Go to next     point in history.
 * `cursor-history:prev`: Go to previous point in history.
-* `cursor-history:reset`: Rest history when you are in trouble.
+* `cursor-history:clear`: Clear history when you are in trouble.
 
 # What condition cursor history will be kept?
 

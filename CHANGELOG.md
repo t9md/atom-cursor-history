@@ -1,3 +1,8 @@
+## 0.2.2 - Improve
+* No longer change active pane if editor's URI is same.
+* Always save history when buffer URI changes.
+* [BREAKING] rename `cursor-history:reset` to `cursor-history:clear`.
+
 ## 0.2.1 - Bugfix 2015-05-06
 * @direction was set when entry return undefined.
 * Now use Marker which is more resilient to buffer change.
