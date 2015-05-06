@@ -11,28 +11,32 @@ class History
     @max     = max
 
   isNewest: ->
-    @entries.length is 0 or @index is @entries.length - 1
+    @entries.length is 0 or @index is @entries.length
 
   isOldest: ->
-    @entries.length is 0 or @index is 0
+    @entries.length is 0 or @index is -1
 
   isEmpty: ->
     @entries.length is 0
 
   next: ->
     if @isNewest()
-      # console.log "newest"
+      console.log "newest"
       return
-    @get(@index + 1)
+    @index = @index + 1
+    @get(@index)
 
   prev: ->
     if @isOldest()
-      # console.log "oldest"
+      console.log "oldest"
       return
-    @get(@index - 1)
+    entry = @get(@index)
+    @index = @index - 1
+    entry
 
-  get: (@index) ->
-    @entries[@index]
+  get: (index) ->
+    # console.log index
+    @entries[index]
 
   getLastURI: ->
     @get(@index)?.URI
@@ -42,14 +46,20 @@ class History
     @index = @index + 1
     @entries[@index] = entry
 
-    newLength = @index + 1
-    return if newLength >= @entries.length
+  setToHead: (entry) ->
+    @entries[@entries.length] = entry
+    @dump()
 
-    entries = @entries.splice(newLength, @entries.length - newLength)
-    for {marker} in entries
-      marker.destroy()
+    # newLength = @index + 1
+    # return if newLength >= @entries.length
+    #
+    # entries = @entries.splice(newLength, @entries.length - newLength)
+    # for {marker} in entries
+    #   marker.destroy()
 
   dump: ->
-    console.log [ @entries, @index, @entries.length ]
+    # entries = ({URI: e.URI, Point: e.marker.getStartBufferPosition().toString()} for e in @entries)
+    entries = (e.marker.getStartBufferPosition().toString() for e in @entries)
+    console.log [ entries, @index, @entries.length ]
 
   serialize: () ->

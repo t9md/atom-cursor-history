@@ -27,15 +27,15 @@ module.exports =
       @rowDeltaToRemember = newValue
 
     atom.commands.add 'atom-workspace',
-      'cursor-history:next': => @next()
-      'cursor-history:prev': => @prev()
+      'cursor-history:next':  => @next()
+      'cursor-history:prev':  => @prev()
       'cursor-history:clear': => @clear()
-      # 'cursor-history:dump':  => @dump()
+      'cursor-history:dump':  => @dump()
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
 
-  # dump: -> console.log @direction
+  dump: -> console.log @history.dump()
 
   deactivate: ->
     @subscriptions.dispose()
@@ -45,6 +45,14 @@ module.exports =
     @history?.serialize()
 
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
+    # console.log {oldBufferPosition, newBufferPosition}
+    # console.log "moved"
+    if @direction is 'prev' and (@history.entries.length - 2 is @history.index )
+      oldPosMarker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
+      @history.setToHead {marker: oldPosMarker, URI: cursor.editor.getURI()}
+      console.log "Remember Head"
+      return
+
     if @direction is 'next' or @direction is 'prev'
       @direction = null
       return
@@ -52,10 +60,10 @@ module.exports =
     return if cursor.editor.hasMultipleCursors()
     return unless @needRemember.bind(@)(oldBufferPosition, newBufferPosition, cursor)
 
-    # console.log "Remember"
+    console.log "Remember"
 
-    marker = cursor.editor.markBufferPosition(newBufferPosition, {invalidate: 'never', persistent: false})
-    @history.add {marker: marker, URI: cursor.editor.getURI()}
+    oldPosMarker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
+    @history.add {marker: oldPosMarker, URI: cursor.editor.getURI()}
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     URI = cursor.editor.getURI()
