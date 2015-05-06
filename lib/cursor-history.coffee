@@ -1,42 +1,35 @@
 module.exports =
 class CursorHistory
-  constructor: ->
-    @initialize()
+  constructor: (max) ->
+    @initialize(max)
 
-  reset: -> @initialize()
+  reset: -> @initialize(@max)
 
-  initialize: ->
+  initialize: (max) ->
     @index   = -1
     @entries = []
-    @max = atom.config.get('cursor-history.max')
-
-  getLength: -> @entries.length
+    @max     = max
 
   next: ->
-    if @index + 1 is @entries.length
+    if @index is @entries.length - 1
       console.log "newest"
       return
-    @index = @index + 1
-    @get @index
+    @get(@index + 1)
 
   prev: ->
-    if @index - 1 is -1
+    if @index is 0
       console.log "oldest"
       return
-    @index = @index - 1
-    @get @index
+    @get(@index - 1)
 
-  get: (index) ->
-    @entries[index]
+  get: (@index) ->
+    @entries[@index]
 
   add: (entry) ->
-    if @index + 1 is @max
-      console.log 'max'
-      return
+    return if @index + 1 is @max
     @index = @index + 1
     @entries[@index] = entry
     @entries.length = @index + 1
-    console.log @dump()
 
   dump: ->
     console.log [ @entries, @index, @entries.length ]
