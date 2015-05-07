@@ -59,8 +59,6 @@ module.exports =
     marker.setProperties properties
     marker
 
-
-
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
     return if cursor.editor.hasMultipleCursors()
 
@@ -88,9 +86,7 @@ module.exports =
       return false
 
     lastURI = @history.getLastURI()
-    # @debug "lastURI: #{lastURI}, currentURI: #{URI}"
     if lastURI and lastURI isnt URI
-      # @debug "URI dirrelent"
       # Should remember, if buffer path is defferent.
       return true
 
@@ -103,7 +99,7 @@ module.exports =
   clear: -> @history.clear()
 
   jump: (direction) ->
-    # return if not TextEditor workspace like Settings tab.
+    # TextEditor workspace like Settings tab don't have editor.
     activeEditor = atom.workspace.getActiveTextEditor()
     return unless activeEditor
 
