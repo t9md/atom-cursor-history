@@ -1,88 +1,88 @@
+debug = (msg) ->
+  return unless atom.config.get('cursor-history.debug')
+  console.log msg
+
 module.exports =
 class History
   constructor: (max) -> @initialize(max)
   clear: -> @initialize(@max)
 
   initialize: (max) ->
-    @debug   = false
     @index   = 0
     @entries = []
     @max     = max
 
-  isNewest: -> @index is @entries.length - 1
-  isOldest: -> @index is 0
+  isNewest: -> @isEmpty() or @index is @entries.length - 1
+  isOldest: -> @isEmpty() or @index is 0
+  isEmpty:  -> @entries.length is 0
 
-  isEmpty: ->
-    @entries.length is 0
+  get: (index) -> @entries[index]
+  getCurrent:  -> @get(@index)
+  getNext:     -> @get(@index + 1)
+  getPrev:     -> @get(@index - 1)
+  getLastURI:  -> @getPrev()?.URI
 
   next: ->
-    return if @isEmpty()
     if @isNewest()
-      if @debug
-        console.log "# Newest"
-        @dump()
+      debug "# Newest"
+      @dump() if atom.config.get('cursor-history.debug')
       return
-    @index = @index + 1
-    if @debug
-      @dump()
-    @get(@index)
+    @index += 1
+    @dump() if atom.config.get('cursor-history.debug')
+    @getCurrent()
 
   prev: ->
-    return if @isEmpty()
     if @isOldest()
-      if @debug
-        console.log "# Oldest"
-        @dump()
+      debug "# Oldest"
+      @dump() if atom.config.get('cursor-history.debug')
       return
-    @index = @index - 1
-    @dump() if @debug
-    @get(@index)
-
-  get: (index) ->
-    @entries[index]
-
-  getLastURI: ->
-    @get(@index-1)?.URI
+    @index -= 1
+    @dump() if atom.config.get('cursor-history.debug')
+    @getCurrent()
 
   truncate: ->
     newLength = @index + 1
     return if newLength >= @entries.length
+
     deleteCount = @entries.length - newLength
-    console.log "truncate #{deleteCount}" if @debug
+    debug "# Truncate #{deleteCount}"
     entries = @entries.splice(newLength, deleteCount)
     for {marker} in entries
       marker.destroy()
 
   add: (entry) ->
-    if @entries.length is @max
-      @entries.splice(0, 1)
 
-    @truncate()
-
-    oldPos = @get(@index)?.marker.getStartBufferPosition()
+    oldPos = @getCurrent()?.marker.getStartBufferPosition()
     newPos = entry.marker.getStartBufferPosition()
     unless newPos.isEqual(oldPos)
-      console.log "save" if @debug
-      @entries.push entry
+      if @entries.length is @max
+        @entries.splice(0, 1)
+      debug "-- save"
+      @entries[@index] = entry
     else
-      console.log "skip" if @debug
+      debug "-- skip"
 
+    @truncate()
     @index = @entries.length
 
   pushToHead: (entry) ->
     @entries.push entry
-    @dump() if @debug
+    @dump() if atom.config.get('cursor-history.debug')
+
+  inspectEntry: (entry) ->
+    "#{entry.marker.getStartBufferPosition().toString()}, #{entry.URI}"
 
   dump: ->
-    entries = ({marker: e.marker.getStartBufferPosition().toString(), URI: e.URI} for e in @entries)
-    console.log " - index #{@index}"
-    entries = entries.map(
+    currentValue = if @getCurrent() then @inspectEntry(@getCurrent()) else @getCurrent()
+    console.log " - index #{@index} #{currentValue}"
+    entries = @entries.map(
       ((e, i) ->
         if i is @index
-          "> #{i}: #{e.marker} #{e.URI}"
+          "> #{i}: #{@inspectEntry(e)}"
         else
-          "  #{i}: #{e.marker} #{e.URI}"), @)
-    entries.push ">" unless @entries[@index]
+          "  #{i}: #{@inspectEntry(e)}"), @)
+    entries.push "> #{@index}:" unless currentValue
+
     console.log entries.join("\n")
 
   serialize: () ->

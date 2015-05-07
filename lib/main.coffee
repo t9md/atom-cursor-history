@@ -22,17 +22,17 @@ module.exports =
       default: false
       description: "Output history on console.log"
 
+  debug: (msg) ->
+    return unless atom.config.get('cursor-history.debug')
+    console.log msg
+
   activate: (state) ->
     @subscriptions = new CompositeDisposable
     @history = new CursorHistory(atom.config.get('cursor-history.max'))
-    @history.debug = @debug = atom.config.get('cursor-history.debug')
 
     @rowDeltaToRemember = atom.config.get('cursor-history.rowDeltaToRemember')
     @subscriptions.add atom.config.onDidChange 'cursor-history.rowDeltaToRemember', ({newValue}) =>
       @rowDeltaToRemember = newValue
-
-    @subscriptions.add atom.config.onDidChange 'cursor-history.debug', ({newValue}) =>
-      @debug = @history.debug = newValue
 
     atom.commands.add 'atom-workspace',
       'cursor-history:next':  => @next()
@@ -43,7 +43,8 @@ module.exports =
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
 
-  dump: -> console.log @history.dump()
+  dump: ->
+    @history.dump()
 
   deactivate: ->
     @subscriptions.dispose()
@@ -53,10 +54,10 @@ module.exports =
     @history?.serialize()
 
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
-    if @direction is 'prev' and (@history.index + 1 is @history.entries.length)
+    if @direction is 'prev' and not @history.getNext()
+      @debug "# Remember Head"
       marker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
       @history.pushToHead {marker: marker, URI: cursor.editor.getURI()}
-      console.log "Remember Head" if @debug
       @direction = null
       return
 
@@ -66,11 +67,11 @@ module.exports =
 
     return if cursor.editor.hasMultipleCursors()
     return unless @needRemember.bind(@)(oldBufferPosition, newBufferPosition, cursor)
-    console.log "Remember" if @debug
+    @debug "# Need to remember"
 
     marker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
     @history.add {marker: marker, URI: cursor.editor.getURI()}
-    @history.dump() if @debug
+    @history.dump() if atom.config.get('cursor-history.debug')
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     URI = cursor.editor.getURI()
@@ -83,7 +84,6 @@ module.exports =
     if lastURI and lastURI isnt URI
       # Should remember, if buffer path is defferent.
       return true
-
 
     if Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
       return true

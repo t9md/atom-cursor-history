@@ -2,8 +2,8 @@
 # Chose your preference, I don't want to set default keymap,
 # since it's easily conflict to others.
 
-'atom-workspace':
+# 'atom-workspace':
 #   'ctrl-i': 'cursor-history:next'
 #   'ctrl-o': 'cursor-history:prev'
-  'f7': 'cursor-history:dump'
-  'f8': 'cursor-history:clear'
+#   'f7': 'cursor-history:dump'
+#   'f8': 'cursor-history:clear'
