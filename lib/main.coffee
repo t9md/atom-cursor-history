@@ -53,11 +53,15 @@ module.exports =
   serialize: ->
     @history?.serialize()
 
+  creatMarker: (cursor, point) ->
+    cursor.editor.markBufferPosition point, {invalidate: 'never', persistent: false}
+
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
+    return if cursor.editor.hasMultipleCursors()
+
     if @direction is 'prev' and not @history.getNext()
       @debug "# Remember Head"
-      marker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
-      @history.pushToHead {marker: marker, URI: cursor.editor.getURI()}
+      @history.pushToHead {marker: @creatMarker(cursor, oldBufferPosition), URI: cursor.editor.getURI()}
       @direction = null
       return
 
@@ -65,12 +69,9 @@ module.exports =
       @direction = null
       return
 
-    return if cursor.editor.hasMultipleCursors()
     return unless @needRemember.bind(@)(oldBufferPosition, newBufferPosition, cursor)
     @debug "# Need to remember"
-
-    marker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
-    @history.add {marker: marker, URI: cursor.editor.getURI()}
+    @history.add {marker: @creatMarker(cursor, oldBufferPosition), URI: cursor.editor.getURI()}
     @history.dump() if atom.config.get('cursor-history.debug')
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->

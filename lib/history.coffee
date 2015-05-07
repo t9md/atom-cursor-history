@@ -51,7 +51,6 @@ class History
       marker.destroy()
 
   add: (entry) ->
-
     oldPos = @getCurrent()?.marker.getStartBufferPosition()
     newPos = entry.marker.getStartBufferPosition()
     unless newPos.isEqual(oldPos)
