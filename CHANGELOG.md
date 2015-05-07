@@ -1,3 +1,6 @@
+## 0.2.5 - Improve 2015-05-08
+* No longer try to jump to mark on deleted file.
+
 ## 0.2.4 - Improve 2015-05-08
 * Use Marker's setProperties rather than Object which own marker as property.
 

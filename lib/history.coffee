@@ -43,6 +43,9 @@ class History
   isHead: ->
     @index is @entries.length
 
+  remove: (index) ->
+    @entries.splice(index, 1)[0]
+
   add: (marker) ->
     unless @isHead()
       debug "# Concatenating history"

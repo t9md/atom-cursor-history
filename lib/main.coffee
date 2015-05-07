@@ -1,5 +1,6 @@
 {CompositeDisposable} = require 'atom'
 CursorHistory = require './history'
+fs = require 'fs'
 
 module.exports =
   history: null
@@ -87,7 +88,9 @@ module.exports =
       return false
 
     lastURI = @history.getLastURI()
+    # @debug "lastURI: #{lastURI}, currentURI: #{URI}"
     if lastURI and lastURI isnt URI
+      # @debug "URI dirrelent"
       # Should remember, if buffer path is defferent.
       return true
 
@@ -100,13 +103,22 @@ module.exports =
   clear: -> @history.clear()
 
   jump: (direction) ->
+    # return if not TextEditor workspace like Settings tab.
     activeEditor = atom.workspace.getActiveTextEditor()
     return unless activeEditor
 
-    marker = @history[direction]()
-    return unless marker
+    while marker = @history[direction]()
+      URI = marker.getProperties().URI
+      if fs.existsSync URI
+        break
+      else
+        @debug "URI not exit: #{URI}"
+        marker.destroy()
+        @history.remove(@history.index)
+        if direction is 'next'
+          @history.index -= 1
 
-    URI = marker.getProperties().URI
+    return unless marker
 
     @direction = direction
     pos = marker.getStartBufferPosition()
