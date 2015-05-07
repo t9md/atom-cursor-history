@@ -40,7 +40,7 @@ I have some idea to make this more granular way.
 
 # TODO
 - [x] Use oldBufferPosition rather than newBufferPosition to save. This need drastic data model(history) change, but must do.
-- [x] exclude inValid Mark. deleted File(URI).
+- [x] Exclude inValid Mark. deleted File(URI).
 - [x] Better history concatenation.
 - [x] Use Maker instead of buffer position.
 - [ ] Support serialization to support per-project cursor history.
