@@ -17,14 +17,22 @@ module.exports =
       default: 4
       minimum: 1
       description: "Only if dirrerence of cursor row exceed this value, cursor position is saved to history"
+    debug:
+      type: 'boolean'
+      default: false
+      description: "Output history on console.log"
 
   activate: (state) ->
     @subscriptions = new CompositeDisposable
     @history = new CursorHistory(atom.config.get('cursor-history.max'))
+    @history.debug = @debug = atom.config.get('cursor-history.debug')
 
     @rowDeltaToRemember = atom.config.get('cursor-history.rowDeltaToRemember')
-    @subscriptions.add atom.config.observe 'cursor-history.rowDeltaToRemember', (newValue) =>
+    @subscriptions.add atom.config.onDidChange 'cursor-history.rowDeltaToRemember', ({newValue}) =>
       @rowDeltaToRemember = newValue
+
+    @subscriptions.add atom.config.onDidChange 'cursor-history.debug', ({newValue}) =>
+      @debug = @history.debug = newValue
 
     atom.commands.add 'atom-workspace',
       'cursor-history:next':  => @next()
@@ -45,12 +53,11 @@ module.exports =
     @history?.serialize()
 
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
-    # console.log {oldBufferPosition, newBufferPosition}
-    # console.log "moved"
-    if @direction is 'prev' and (@history.entries.length - 2 is @history.index )
-      oldPosMarker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
-      @history.setToHead {marker: oldPosMarker, URI: cursor.editor.getURI()}
-      console.log "Remember Head"
+    if @direction is 'prev' and (@history.index + 1 is @history.entries.length)
+      marker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
+      @history.pushToHead {marker: marker, URI: cursor.editor.getURI()}
+      console.log "Remember Head" if @debug
+      @direction = null
       return
 
     if @direction is 'next' or @direction is 'prev'
@@ -59,11 +66,11 @@ module.exports =
 
     return if cursor.editor.hasMultipleCursors()
     return unless @needRemember.bind(@)(oldBufferPosition, newBufferPosition, cursor)
+    console.log "Remember" if @debug
 
-    console.log "Remember"
-
-    oldPosMarker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
-    @history.add {marker: oldPosMarker, URI: cursor.editor.getURI()}
+    marker = cursor.editor.markBufferPosition(oldBufferPosition, {invalidate: 'never', persistent: false})
+    @history.add {marker: marker, URI: cursor.editor.getURI()}
+    @history.dump() if @debug
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     URI = cursor.editor.getURI()
@@ -76,6 +83,7 @@ module.exports =
     if lastURI and lastURI isnt URI
       # Should remember, if buffer path is defferent.
       return true
+
 
     if Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
       return true
