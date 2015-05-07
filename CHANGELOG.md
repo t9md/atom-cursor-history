@@ -1,4 +1,9 @@
-## 0.2.2 - Improve
+## 0.2.3 - Improve 2015-05-07
+* Use `oldBufferPosition`.
+* Add debug info.
+* FIX corner case bug.
+
+## 0.2.2 - Improve 2015-05-06
 * No longer change active pane if editor's URI is same.
 * Always save history when buffer URI changes.
 * [BREAKING] rename `cursor-history:reset` to `cursor-history:clear`.

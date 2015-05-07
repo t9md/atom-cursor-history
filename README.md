@@ -39,7 +39,7 @@ Currently when the row delata between old cursor position and new exceeds `rowDe
 I have some idea to make this more granular way.
 
 # TODO
-- [ ] IMPORTANT: User oldBufferPosition rather than newBufferPosition to save. This need drastic data model(history) change, but must do.
+- [x] IMPORTANT: User oldBufferPosition rather than newBufferPosition to save. This need drastic data model(history) change, but must do.
 - [ ] Better history concatenation.
 - [x] Use Maker instead of buffer position.
 - [ ] Support serialization to support per-project cursor history.
