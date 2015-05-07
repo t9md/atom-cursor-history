@@ -1,3 +1,6 @@
+## 0.2.4 - Improve 2015-05-08
+* Use Marker's setProperties rather than Object which own marker as property.
+
 ## 0.2.3 - Improve 2015-05-07
 * Use `oldBufferPosition`.
 * Add debug info.

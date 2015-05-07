@@ -12,7 +12,7 @@ class History
     @entries = []
     @max     = max
 
-  isNewest: -> @isEmpty() or @index is @entries.length - 1
+  isNewest: -> @isEmpty() or @index >= @entries.length - 1
   isOldest: -> @isEmpty() or @index is 0
   isEmpty:  -> @entries.length is 0
 
@@ -20,7 +20,7 @@ class History
   getCurrent:  -> @get(@index)
   getNext:     -> @get(@index + 1)
   getPrev:     -> @get(@index - 1)
-  getLastURI:  -> @getPrev()?.URI
+  getLastURI:  -> @getPrev()?.getProperties().URI
 
   next: ->
     if @isNewest()
@@ -40,46 +40,52 @@ class History
     @dump() if atom.config.get('cursor-history.debug')
     @getCurrent()
 
-  truncate: ->
-    newLength = @index + 1
-    return if newLength >= @entries.length
+  isHead: ->
+    @index is @entries.length
 
-    deleteCount = @entries.length - newLength
-    debug "# Truncate #{deleteCount}"
-    entries = @entries.splice(newLength, deleteCount)
-    for {marker} in entries
-      marker.destroy()
+  add: (marker) ->
+    unless @isHead()
+      debug "# Concatenating history"
+      tail = @entries.slice(@index)
+      # Need copy Marker to avoid destroyed().
+      tail = tail.map (marker) -> marker.copy()
 
-  add: (entry) ->
-    oldPos = @getCurrent()?.marker.getStartBufferPosition()
-    newPos = entry.marker.getStartBufferPosition()
-    unless newPos.isEqual(oldPos)
-      if @entries.length is @max
-        @entries.splice(0, 1)
+      # This deletion is depends on preference, make it configurable?
+      @entries.splice(@index, 1)
+
+      @entries.pop()
+      @entries = @entries.concat tail.reverse()
+
+    oldMark = @entries[@entries.length-1]
+    unless marker.isEqual(oldMark)
       debug "-- save"
-      @entries[@index] = entry
+      @entries.push marker
     else
       debug "-- skip"
 
-    @truncate()
+    if @entries.length > @max
+      markers = @entries.splice(0, @entries.length - @max)
+      for marker in markers
+        marker.destroy()
+
     @index = @entries.length
 
-  pushToHead: (entry) ->
-    @entries.push entry
+  pushToHead: (marker) ->
+    @entries.push marker
     @dump() if atom.config.get('cursor-history.debug')
 
-  inspectEntry: (entry) ->
-    "#{entry.marker.getStartBufferPosition().toString()}, #{entry.URI}"
+  inspectMarker: (marker) ->
+    "#{marker.getStartBufferPosition().toString()}, #{marker.getProperties().URI}"
 
   dump: ->
-    currentValue = if @getCurrent() then @inspectEntry(@getCurrent()) else @getCurrent()
+    currentValue = if @getCurrent() then @inspectMarker(@getCurrent()) else @getCurrent()
     console.log " - index #{@index} #{currentValue}"
     entries = @entries.map(
       ((e, i) ->
         if i is @index
-          "> #{i}: #{@inspectEntry(e)}"
+          "> #{i}: #{@inspectMarker(e)}"
         else
-          "  #{i}: #{@inspectEntry(e)}"), @)
+          "  #{i}: #{@inspectMarker(e)}"), @)
     entries.push "> #{@index}:" unless currentValue
 
     console.log entries.join("\n")
