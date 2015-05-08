@@ -105,13 +105,11 @@ module.exports =
 
     while marker = @history[direction]()
       URI = marker.getProperties().URI
-      if fs.existsSync URI
-        break
-      else
-        @debug "URI not exit: #{URI}"
-        @history.removeCurrent()
-        if direction is 'next'
-          @history.index -= 1
+      break if fs.existsSync URI
+
+      @debug "URI not exit: #{URI}"
+      @history.removeCurrent()
+      @history.index -= 1 if direction is 'next'
 
     return unless marker
 

@@ -46,7 +46,10 @@ class History
     @index is @entries.length
 
   removeCurrent: ->
-    @remove(@inedex)[0]
+    @remove(@index)?[0]
+
+  removeNewest: ->
+    @remove(@entries.length - 1)?[0]
 
   remove: (index, count=1) ->
     markers = @entries.splice(index, count)
@@ -68,15 +71,17 @@ class History
 
       # Need copy Marker to avoid destroyed().
       # [FIXME] https://github.com/t9md/atom-cursor-history/issues/2
-      # Marker::copy() call DisplayBuffer.screenPositionForBufferPosition()
-      # when TextEditor is destroyed, it throw Error.
+      # Marker::copy() call DisplayBuffer.screenPositionForBufferPosition().
+      # Marker::copy() throw Error if TextEditor is already destroyed.
       # So we can't simply use Marker::copy() here.
-      # tail = tail.map (marker) -> marker.copy()
+      # follwing line is not work.
+      #
+      #   tail = tail.map (marker) -> marker.copy()
+      #
 
       # This deletion is depends on preference, make it configurable?
-      @entries.splice(@index, 1)
-
-      @entries.pop()
+      @removeCurrent()
+      @removeNewest()
       @entries = @entries.concat tail.reverse()
 
     oldMark = @entries[@entries.length-1]

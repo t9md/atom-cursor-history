@@ -1,3 +1,6 @@
+## 0.2.7 - Improve 2015-05-08
+* Cleanup. and eliminate direct splice() to destroy() marker properly.
+
 ## 0.2.6 - Improve 2015-05-08
 * [BUGFIX] Uncaught Error: This TextEditor has been destroyed #2
 
