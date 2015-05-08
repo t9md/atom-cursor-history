@@ -1,3 +1,5 @@
+_ = require 'underscore-plus'
+
 debug = (msg) ->
   return unless atom.config.get('cursor-history.debug')
   console.log msg
@@ -43,15 +45,33 @@ class History
   isHead: ->
     @index is @entries.length
 
-  remove: (index) ->
-    @entries.splice(index, 1)[0]
+  removeCurrent: ->
+    @remove(@inedex)[0]
+
+  remove: (index, count=1) ->
+    markers = @entries.splice(index, count)
+    for removedMarker in markers
+      # Since we can't simply use Maker::copy(), marker is shallew copied.
+      # Only if no copy is exists in remaining @entries, we can destroy() it.
+      if _.detect(@entries, (marker) -> removedMarker.isEqual(marker))
+        continue
+
+      debug "# Destroy marker: #{@inspectMarker(removedMarker)}"
+      removedMarker.destroy()
+
+    marker.destroy() for marker in markers
 
   add: (marker) ->
     unless @isHead()
       debug "# Concatenating history"
       tail = @entries.slice(@index)
+
       # Need copy Marker to avoid destroyed().
-      tail = tail.map (marker) -> marker.copy()
+      # [FIXME] https://github.com/t9md/atom-cursor-history/issues/2
+      # Marker::copy() call DisplayBuffer.screenPositionForBufferPosition()
+      # when TextEditor is destroyed, it throw Error.
+      # So we can't simply use Marker::copy() here.
+      # tail = tail.map (marker) -> marker.copy()
 
       # This deletion is depends on preference, make it configurable?
       @entries.splice(@index, 1)
@@ -67,9 +87,7 @@ class History
       debug "-- skip"
 
     if @entries.length > @max
-      markers = @entries.splice(0, @entries.length - @max)
-      for marker in markers
-        marker.destroy()
+      @remove(0, @entries.length - @max)
 
     @index = @entries.length
 

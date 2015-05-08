@@ -1,3 +1,6 @@
+## 0.2.6 - Improve 2015-05-08
+* [BUGFIX] Uncaught Error: This TextEditor has been destroyed #2
+
 ## 0.2.5 - Improve 2015-05-08
 * No longer try to jump to mark on deleted file.
 

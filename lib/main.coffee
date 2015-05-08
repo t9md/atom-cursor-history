@@ -109,8 +109,7 @@ module.exports =
         break
       else
         @debug "URI not exit: #{URI}"
-        marker.destroy()
-        @history.remove(@history.index)
+        @history.removeCurrent()
         if direction is 'next'
           @history.index -= 1
 
