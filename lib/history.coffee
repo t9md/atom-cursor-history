@@ -24,6 +24,8 @@ class History
   getPrev:     -> @get(@index - 1)
   getLastURI:  -> @getPrev()?.getProperties().URI
 
+  destroy: ->
+
   next: ->
     if @isNewest()
       debug "# Newest"
