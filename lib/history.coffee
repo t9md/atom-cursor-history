@@ -52,7 +52,7 @@ class History
     markers = @entries.splice(index, count)
     for removedMarker in markers
       # Since we can't simply use Maker::copy(), marker is shallow copied.
-      # Only if no copy is exists in remaining @entries, we can destroy() it.
+      # Only if no copy exists in remaining @entries, we can destroy() it.
       if _.detect(@entries, (marker) -> removedMarker.isEqual(marker))
         continue
 
