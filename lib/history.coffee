@@ -59,7 +59,7 @@ class History
       debug "# Destroy marker: #{@inspectMarker(removedMarker)}"
       removedMarker.destroy()
 
-    marker.destroy() for marker in markers
+    markers
 
   add: (marker) ->
     unless @isHead()
