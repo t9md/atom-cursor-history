@@ -1,3 +1,6 @@
+## 0.2.8 - Improve 2015-05-08
+* [FIX] calling History::dispose() throw Error when deactivated.
+
 ## 0.2.7 - Improve 2015-05-08
 * Cleanup. and eliminate direct splice() to destroy() marker properly.
 
