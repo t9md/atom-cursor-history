@@ -76,79 +76,52 @@ class History
     removedMarkers
 
   # History concatenation mimicking Vim's way.
-  # e.g. Jump from point 3(@index=2) to new 6.
-  #   || indicate current @index.
-  #   Before: [1,2,|3|,4,5]
-  #   After:  [1,2,4,5,4,3,6,||]
-
-  # Old position is always inserted to end of @entries.
-  #  and remove older entry wich have samel line of new ently
-  # [case-1]
-  #   Before               : [1,3,5,|7|,8]
-  #   jump to line 9       : [1,3,5,8,7,||] NOTE: 7 inserted end, and old removed
-  #   back to 7 with `prev`: [1,3,5,8,|7|,9]
-  # [case-2]
-  #   Before               : [1,|3|,5,7,8]
-  #   jumpto line 7        : [1,5,7,8,3,||] NOTE: 3 inserted end
-  #   back to 3 with `prev`: [1,5,8,|3|,7] NOTE: 7 inserted end
-
-  # concatenate: (newMarker) ->
-  #   # [FIXME] https://github.com/t9md/atom-cursor-history/issues/2
-  #   # Why I use Array::slice() rather than simply use marker::copy()
-  #   #
-  #   # Marker::copy() call DisplayBuffer.screenPositionForBufferPosition().
-  #   # Marker::copy() throw Error if TextEditor is already destroyed.
-  #   tail = @entries.slice @index
+  # newMarker(=old position from where you jump to here) is
+  # always added to end of @entries.
+  # And delete marker wich have same row of same file with newMarker.
+  # e.g || indicate @index
+  #  * case-1: Jump from row=7 to row=9 then back with `prev`.
+  #   1. newMarker's row=7
+  #       => [1,3,5,|7|,8]
+  #   2. old 7 is deleted and @index adjusted to point head.
+  #       => [1,3,5,8,7,||]
+  #   3. `prev` from 9 to 7, add 9 to end, @index not adjusted.
+  #       => [1,3,5,8,|7|,9]
   #
-  #   # Since, orignal last entry(5 in above e.g.) is always
-  #   #  included in new @entries after concatenation.
-  #   # So, no need safely @remove() with destroy(), we can simply pop() it.
-  #   @entries.pop()
-  #   @entries = @entries.concat tail.reverse()
-  #
-  #   # We don't keep samel row of same file(URI), so that you will get back to
-  #   # old position only once.
-  #   # See.
-  #   # http://vimhelp.appspot.com/motion.txt.html#jump-motions
-  #   newRow = newMarker.getStartBufferPosition().row
-  #   newURI = newMarker.getProperties().URI
-  #
-  #   for marker in @entries
-  #     if marker.isEqual(newMarker)
-  #       marker.destroy()
-  #       continue
-  #
-  #     URI = marker.getProperties().URI
-  #     row = marker.getStartBufferPosition().row
-  #     if newURI is URI and newRow is row
-  #       marker.destroy()
-  #
-  #   @entries = _.select (@entries , (marker) -> marker.isValid()
-
+  #  * case-2: jump from row=3 to row=7 then back with `prev`.
+  #   1. newMarker's row=3
+  #       => [1,|3|,5,7,8]
+  #   2. 3 added to end and old 3 is deleted, @index adjusted to point to head.
+  #       => [1,5,7,8,3,||]
+  #   3. `prev` from 7 to 3, add 7 to end, @index not adjusted. old 7 reoved.
+  #       => [1,5,8,|3|,7]
   add: (newMarker, pointToHead=true) ->
+    # Don't keep marker of same row in one file(URI), so that you will get back to
+    # old position(row) only once.
+    # See. http://vimhelp.appspot.com/motion.txt.html#jump-motions
     newRow = newMarker.getStartBufferPosition().row
     newURI = newMarker.getProperties().URI
-
-    for marker in @entries
-      # if marker.isEqual(newMarker)
-      #   marker.destroy()
-      #   continue
+    for marker, i in @entries
+      # console.log marker
       URI = marker.getProperties().URI
       row = marker.getStartBufferPosition().row
       if newURI is URI and newRow is row
         marker.destroy()
+        if (not pointToHead) and (i <= @index)
+          # adjust @index for deletion.
+          @index -= 1
 
-    @entries = _.reject @entries , (marker) -> marker.isDestroyed()
+    @entries = _.reject @entries, (marker) -> marker.isDestroyed()
     @entries.push newMarker
 
     if @entries.length > @max
-      @remove 0, @entries.length - @max
+      @remove 0, (@entries.length - @max)
 
     if pointToHead
       @index = @entries.length
       msg = "Append"
     else
-      msg = "Save to Head"
+      msg = "Push to Head"
     @dump msg
 
   pushToHead: (marker) ->
