@@ -23,14 +23,14 @@ module.exports =
       description: "Output history on console.log"
 
   debug: (msg) ->
-    return unless atom.config.get('cursor-history.debug')
+    return unless atom.config.get 'cursor-history.debug'
     console.log msg
 
   activate: (state) ->
     @subscriptions = new CompositeDisposable
-    @history = new CursorHistory(atom.config.get('cursor-history.max'))
+    @history = new CursorHistory atom.config.get('cursor-history.max')
 
-    @rowDeltaToRemember = atom.config.get('cursor-history.rowDeltaToRemember')
+    @rowDeltaToRemember = atom.config.get 'cursor-history.rowDeltaToRemember'
     @subscriptions.add atom.config.onDidChange 'cursor-history.rowDeltaToRemember', ({newValue}) =>
       @rowDeltaToRemember = newValue
 
@@ -45,10 +45,10 @@ module.exports =
       @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
 
   dump: ->
-    @history.dump('', true)
+    @history.dump '', true
 
   toggleDebug: ->
-    atom.config.toggle('cursor-history.debug')
+    atom.config.toggle 'cursor-history.debug'
     state = atom.config.get('cursor-history.debug') and "enabled" or "disabled"
     console.log "cursor-history: debug #{state}"
 
@@ -60,14 +60,13 @@ module.exports =
     @history?.serialize()
 
   createMarker: (cursor, point, properties) ->
-    marker = cursor.editor.markBufferPosition point, {invalidate: 'never', persistent: false}
+    marker = cursor.editor.markBufferPosition point, invalidate: 'never', persistent: false
     marker.setProperties properties
     marker
 
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
     return if cursor.editor.hasMultipleCursors()
 
-    # @debug "Direction: #{@direction}, Index: #{@history.index}"
     if @direction is 'prev' and @history.isNewest()
       @history.pushToHead @createMarker(cursor, oldBufferPosition, URI: cursor.editor.getURI())
 
@@ -86,35 +85,42 @@ module.exports =
     return false unless URI
 
     lastURI = @history.getURI(@history.index - 1)
+    # Should save if file path(URI) changed.
     if lastURI and lastURI isnt URI
-      # Should remember, if buffer path is defferent.
       return true
 
+    # Line number delata exceeds or not.
     if Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
       return true
     return false
 
-  next:  -> @jump('next')
-  prev:  -> @jump('prev')
+  next:  -> @jump 'next'
+  prev:  -> @jump 'prev'
   clear: -> @history.clear()
 
   jump: (direction) ->
-    # TextEditor workspace like Settings tab don't have editor.
+    # Settings tab is not TextEditor instance.
     activeEditor = atom.workspace.getActiveTextEditor()
     return unless activeEditor
 
     marker = @history[direction]()
     return unless marker
 
+    # Used to track why cursor moved.
+    # Order matter, DONT set @direction before `return`.
+    #  - next: by `cursor-history:next` command
+    #  - prev: by `cursor-history:prev` command
+    #  - null: normal movement.
     @direction = direction
 
     URI = marker.getProperties().URI
     pos = marker.getStartBufferPosition()
 
     if activeEditor.getURI() is URI
-      # Within active editor.
+      # Jump within active editor.
       activeEditor.setCursorBufferPosition pos
       return
 
     atom.workspace.open(URI, searchAllPanes: true).done (editor) =>
+      # Jump to another another file.
       editor.setCursorBufferPosition pos

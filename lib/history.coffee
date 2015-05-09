@@ -7,8 +7,8 @@ debug = (msg) ->
 
 module.exports =
 class History
-  constructor: (max) -> @initialize(max)
-  clear: -> @initialize(@max)
+  constructor: (max) -> @initialize max
+  clear: -> @initialize @max
 
   initialize: (max) ->
     @index   = 0
@@ -20,7 +20,7 @@ class History
   isEmpty:  -> @entries.length is 0
 
   get: (index) -> @entries[index]
-  getCurrent:  -> @get(@index)
+  getCurrent:  -> @get @index
   getURI: (index) -> @get(index)?.getProperties().URI
 
   destroy: ->
@@ -53,20 +53,20 @@ class History
     if @isNewest()
       @dump "Newest"
       return
-    @getValid('next')
+    @getValid 'next'
 
   prev: ->
     if @isOldest()
       @dump "Oldest"
       return
-    @getValid('prev')
-
+    @getValid 'prev'
 
   removeCurrent: -> @remove(@index)?[0]
+
   remove: (index, count=1) ->
     removedMarkers = @entries.splice(index, count)
 
-    # Since we can't simply use Maker::copy(), marker is shallow copied.
+    # Since we can't simply use Maker::copy(), we copy marker shallowly.
     # Only if no copy exists in remaining @entries, we can destroy() it.
     for removedMarker in removedMarkers
       if _.detect(@entries, (marker) -> removedMarker.isEqual(marker))
@@ -95,16 +95,15 @@ class History
     #
     # Marker::copy() call DisplayBuffer.screenPositionForBufferPosition().
     # Marker::copy() throw Error if TextEditor is already destroyed.
-    tail = @entries.slice(@index)
+    tail = @entries.slice @index
 
     # Since, orignal last entry(5 in above e.g.) is always
     #  included in new @entries after concatenation.
-    # We don't need call Marker::destroy().
-    # So, we don't need @remove(), simply pop() it.
+    # So, no need safely @remove() with destroy(), we can simply pop() it.
     @entries.pop()
     @entries = @entries.concat tail.reverse()
 
-    # This deletion is depends on preference, make it configurable?
+    # This deletion depends on preference, make it configurable?
     # [NOTE] Order is matter, since marker is shallow copied, and when remove(),
     # it check whether it have reference in @entries.
     # So removing should be done after all concatenation was done.
@@ -124,9 +123,9 @@ class History
       msg.push "Skip"
 
     if @entries.length > @max
-      @remove(0, @entries.length - @max)
+      @remove 0, @entries.length - @max
     @index = @entries.length
-    @dump(msg.join())
+    @dump msg.join()
 
   pushToHead: (marker) ->
     @entries.push marker
@@ -141,7 +140,6 @@ class History
 
     console.log "# cursor-history: #{msg}" if msg
     currentValue = if @getCurrent() then @inspectMarker(@getCurrent()) else @getCurrent()
-    # console.log "Index: #{@index}, #{currentValue}"
     entries = @entries.map(
       ((e, i) ->
         if i is @index
