@@ -15,7 +15,7 @@ module.exports =
     rowDeltaToRemember:
       type: 'integer'
       default: 4
-      minimum: 1
+      minimum: 0
       description: "Only if dirrerence of cursor row exceed this value, cursor position is saved to history"
     debug:
       type: 'boolean'

@@ -80,56 +80,79 @@ class History
   #   || indicate current @index.
   #   Before: [1,2,|3|,4,5]
   #   After:  [1,2,4,5,4,3,6,||]
-  # Steps
-  #  0.  start @index=2: [1,2,|3|,4,5]
-  #  1.  slice(@index) : @entries = [1,2,|3|,4,5], tail = [3,4,5]
-  #  2.  pop()         : @entries = [1,2,|3|,4]
-  #  3.  concat:       : [1,2,|3|,4] + [5,4,3] NOTE: tail reversed()
-  #  4.  removeCurrent : [1,2,|4|,5,4,3] NOTE: point 3 removed
-  #  bellow is done in @add()
-  #  5.  push new      : [1,2,|4|,5,4,3,6]
-  #  6.  @index = @entries.length: [1,2,4,5,4,3,6,||]
-  concatenate: ->
-    # [FIXME] https://github.com/t9md/atom-cursor-history/issues/2
-    # Why I use Array::slice() rather than simply use marker::copy()
-    #
-    # Marker::copy() call DisplayBuffer.screenPositionForBufferPosition().
-    # Marker::copy() throw Error if TextEditor is already destroyed.
-    tail = @entries.slice @index
 
-    # Since, orignal last entry(5 in above e.g.) is always
-    #  included in new @entries after concatenation.
-    # So, no need safely @remove() with destroy(), we can simply pop() it.
-    @entries.pop()
-    @entries = @entries.concat tail.reverse()
+  # Old position is always inserted to end of @entries.
+  #  and remove older entry wich have samel line of new ently
+  # [case-1]
+  #   Before               : [1,3,5,|7|,8]
+  #   jump to line 9       : [1,3,5,8,7,||] NOTE: 7 inserted end, and old removed
+  #   back to 7 with `prev`: [1,3,5,8,|7|,9]
+  # [case-2]
+  #   Before               : [1,|3|,5,7,8]
+  #   jumpto line 7        : [1,5,7,8,3,||] NOTE: 3 inserted end
+  #   back to 3 with `prev`: [1,5,8,|3|,7] NOTE: 7 inserted end
 
-    # This deletion depends on preference, make it configurable?
-    # [NOTE] Order is matter, since marker is shallow copied, and when remove(),
-    # it check whether it have reference in @entries.
-    # So removing should be done after all concatenation was done.
-    @removeCurrent()
+  # concatenate: (newMarker) ->
+  #   # [FIXME] https://github.com/t9md/atom-cursor-history/issues/2
+  #   # Why I use Array::slice() rather than simply use marker::copy()
+  #   #
+  #   # Marker::copy() call DisplayBuffer.screenPositionForBufferPosition().
+  #   # Marker::copy() throw Error if TextEditor is already destroyed.
+  #   tail = @entries.slice @index
+  #
+  #   # Since, orignal last entry(5 in above e.g.) is always
+  #   #  included in new @entries after concatenation.
+  #   # So, no need safely @remove() with destroy(), we can simply pop() it.
+  #   @entries.pop()
+  #   @entries = @entries.concat tail.reverse()
+  #
+  #   # We don't keep samel row of same file(URI), so that you will get back to
+  #   # old position only once.
+  #   # See.
+  #   # http://vimhelp.appspot.com/motion.txt.html#jump-motions
+  #   newRow = newMarker.getStartBufferPosition().row
+  #   newURI = newMarker.getProperties().URI
+  #
+  #   for marker in @entries
+  #     if marker.isEqual(newMarker)
+  #       marker.destroy()
+  #       continue
+  #
+  #     URI = marker.getProperties().URI
+  #     row = marker.getStartBufferPosition().row
+  #     if newURI is URI and newRow is row
+  #       marker.destroy()
+  #
+  #   @entries = _.select (@entries , (marker) -> marker.isValid()
 
-  add: (marker) ->
-    msg = []
-    unless @isNewest()
-      @concatenate()
-      msg.push "Concatenated"
+  add: (newMarker, pointToHead=true) ->
+    newRow = newMarker.getStartBufferPosition().row
+    newURI = newMarker.getProperties().URI
 
-    oldMark = @entries[@entries.length-1]
-    unless marker.isEqual(oldMark)
-      msg.push "Save"
-      @entries.push marker
-    else
-      msg.push "Skip"
+    for marker in @entries
+      # if marker.isEqual(newMarker)
+      #   marker.destroy()
+      #   continue
+      URI = marker.getProperties().URI
+      row = marker.getStartBufferPosition().row
+      if newURI is URI and newRow is row
+        marker.destroy()
+
+    @entries = _.reject @entries , (marker) -> marker.isDestroyed()
+    @entries.push newMarker
 
     if @entries.length > @max
       @remove 0, @entries.length - @max
-    @index = @entries.length
-    @dump msg.join()
+
+    if pointToHead
+      @index = @entries.length
+      msg = "Append"
+    else
+      msg = "Save to Head"
+    @dump msg
 
   pushToHead: (marker) ->
-    @entries.push marker
-    @dump "Save Head"
+    @add marker, false
 
   inspectMarker: (marker) ->
     "#{marker.getStartBufferPosition().toString()}, #{marker.getProperties().URI}"
