@@ -1,3 +1,6 @@
+## 0.2.9 - Improve 2015-05-08
+* Cleanup and misc bug fix.
+
 ## 0.2.8 - Improve 2015-05-08
 * [FIX] calling History::dispose() throw Error when deactivated.
 

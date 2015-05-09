@@ -1,6 +1,5 @@
 {CompositeDisposable} = require 'atom'
 CursorHistory = require './history'
-fs = require 'fs'
 
 module.exports =
   history: null
@@ -40,12 +39,18 @@ module.exports =
       'cursor-history:prev':  => @prev()
       'cursor-history:clear': => @clear()
       'cursor-history:dump':  => @dump()
+      'cursor-history:toggle-debug': => @toggleDebug()
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
 
   dump: ->
-    @history.dump()
+    @history.dump('', true)
+
+  toggleDebug: ->
+    atom.config.toggle('cursor-history.debug')
+    state = atom.config.get('cursor-history.debug') and "enabled" or "disabled"
+    console.log "cursor-history: debug #{state}"
 
   deactivate: ->
     @subscriptions.dispose()
@@ -54,7 +59,7 @@ module.exports =
   serialize: ->
     @history?.serialize()
 
-  creatMarker: (cursor, point, properties) ->
+  createMarker: (cursor, point, properties) ->
     marker = cursor.editor.markBufferPosition point, {invalidate: 'never', persistent: false}
     marker.setProperties properties
     marker
@@ -62,30 +67,25 @@ module.exports =
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
     return if cursor.editor.hasMultipleCursors()
 
-    @debug "Direction: #{@direction}, Index: #{@history.index}"
-    if @direction is 'prev' and not @history.getNext()
-      @debug "# Remember Head"
-      @history.pushToHead @creatMarker(cursor, oldBufferPosition, URI: cursor.editor.getURI())
-      @direction = null
-      return
+    # @debug "Direction: #{@direction}, Index: #{@history.index}"
+    if @direction is 'prev' and @history.isNewest()
+      @history.pushToHead @createMarker(cursor, oldBufferPosition, URI: cursor.editor.getURI())
 
-    if @direction is 'next' or @direction is 'prev'
+    if @direction
       @direction = null
       return
 
     return unless @needRemember.bind(@)(oldBufferPosition, newBufferPosition, cursor)
-    @debug "# Need to remember"
-    @history.add @creatMarker(cursor, oldBufferPosition, URI: cursor.editor.getURI())
-    @history.dump() if atom.config.get('cursor-history.debug')
+    @history.add @createMarker(cursor, oldBufferPosition, URI: cursor.editor.getURI())
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     URI = cursor.editor.getURI()
-    unless URI
-      # [FIXME] currently buffer without URI is simply ignored.
-      # is there any way to support 'untitled' buffer?
-      return false
 
-    lastURI = @history.getLastURI()
+    # [FIXME] currently buffer without URI is simply ignored.
+    # is there any way to support 'untitled' buffer?
+    return false unless URI
+
+    lastURI = @history.getURI(@history.index - 1)
     if lastURI and lastURI isnt URI
       # Should remember, if buffer path is defferent.
       return true
@@ -94,8 +94,8 @@ module.exports =
       return true
     return false
 
-  next: -> @jump('next')
-  prev: -> @jump('prev')
+  next:  -> @jump('next')
+  prev:  -> @jump('prev')
   clear: -> @history.clear()
 
   jump: (direction) ->
@@ -103,19 +103,16 @@ module.exports =
     activeEditor = atom.workspace.getActiveTextEditor()
     return unless activeEditor
 
-    while marker = @history[direction]()
-      URI = marker.getProperties().URI
-      break if fs.existsSync URI
-
-      @debug "URI not exit: #{URI}"
-      @history.removeCurrent()
-      @history.index -= 1 if direction is 'next'
-
+    marker = @history[direction]()
     return unless marker
 
     @direction = direction
+
+    URI = marker.getProperties().URI
     pos = marker.getStartBufferPosition()
+
     if activeEditor.getURI() is URI
+      # Within active editor.
       activeEditor.setCursorBufferPosition pos
       return
 

@@ -2,9 +2,6 @@
 
 Jump to next and previous cursor position by remembering cursor position history.
 
-# Features
-
-* Won't keep history when multiple cursor is used.
 
 # Keymap
 
@@ -39,10 +36,11 @@ Currently when the row delata between old cursor position and new exceeds `rowDe
 I have some idea to make this more granular way.
 
 # TODO
-- [x] Use oldBufferPosition rather than newBufferPosition to save. This need drastic data model(history) change, but must do.
-- [x] Exclude inValid Mark. deleted File(URI).
+- [ ] Support serialization to support per-project cursor history.
+- [ ] Make configurable when history is saved.
+- [x] Won't save history when multiple cursor is used.
+- [x] Use oldBufferPosition rather than newBufferPosition to save.
+- [x] Exclude inValid Marker. deleted File(URI).
 - [x] Better history concatenation.
 - [x] Use Maker instead of buffer position.
-- [ ] Support serialization to support per-project cursor history.
 - [x] More precise handling when active TextEditor change
-- [ ] Make configurable when history is saved.
