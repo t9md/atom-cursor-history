@@ -75,43 +75,45 @@ class History
       removedMarker.destroy()
     removedMarkers
 
+  # History concatenation mimicking Vim's way.
+  # e.g. Jump from point 3(@index=2) to new 6.
+  #   || indicate current @index.
+  #   Before: [1,2,|3|,4,5]
+  #   After:  [1,2,4,5,4,3,6,||]
+  # Steps
+  #  0.  start @index=2: [1,2,|3|,4,5]
+  #  1.  slice(@index) : @entries = [1,2,|3|,4,5], tail = [3,4,5]
+  #  2.  pop()         : @entries = [1,2,|3|,4]
+  #  3.  concat:       : [1,2,|3|,4] + [5,4,3] NOTE: tail reversed()
+  #  4.  removeCurrent : [1,2,|4|,5,4,3] NOTE: point 3 removed
+  #  bellow is done in @add()
+  #  5.  push new      : [1,2,|4|,5,4,3,6]
+  #  6.  @index = @entries.length: [1,2,4,5,4,3,6,||]
+  concatenate: ->
+    # [FIXME] https://github.com/t9md/atom-cursor-history/issues/2
+    # Why I use Array::slice() rather than simply use marker::copy()
+    #
+    # Marker::copy() call DisplayBuffer.screenPositionForBufferPosition().
+    # Marker::copy() throw Error if TextEditor is already destroyed.
+    tail = @entries.slice(@index)
+
+    # Since, orignal last entry(5 in above e.g.) is always
+    #  included in new @entries after concatenation.
+    # We don't need call Marker::destroy().
+    # So, we don't need @remove(), simply pop() it.
+    @entries.pop()
+    @entries = @entries.concat tail.reverse()
+
+    # This deletion is depends on preference, make it configurable?
+    # [NOTE] Order is matter, since marker is shallow copied, and when remove(),
+    # it check whether it have reference in @entries.
+    # So removing should be done after all concatenation was done.
+    @removeCurrent()
+
   add: (marker) ->
     msg = []
     unless @isNewest()
-      # History concatenation mimicking Vim's way.
-      # e.g. Jump from point 3(@index=2) to new 6.
-      #   || indicate current @index.
-      #   Before: [1,2,|3|,4,5]
-      #   After:  [1,2,4,5,4,3,6,||]
-      # Steps
-      #  0.  start @index=2: [1,2,|3|,4,5]
-      #  1.  slice(@index) : @entries = [1,2,|3|,4,5], tail = [3,4,5]
-      #  2.  pop()         : @entries = [1,2,|3|,4]
-      #  3.  concat:       : [1,2,|3|,4] + [5,4,3] NOTE: tail reversed()
-      #  4.  removeCurrent : [1,2,|4|,5,4,3] NOTE: point 3 removed
-      #  5.  push new      : [1,2,|4|,5,4,3,6]
-      #  6.  @index = @entries.length: [1,2,4,5,4,3,6,||]
-
-      # [FIXME] https://github.com/t9md/atom-cursor-history/issues/2
-      # Why I use Array::slice() rather than simply use marker::copy()
-      #
-      # Marker::copy() call DisplayBuffer.screenPositionForBufferPosition().
-      # Marker::copy() throw Error if TextEditor is already destroyed.
-      tail = @entries.slice(@index)
-
-      # Since, orignal last entry(5 in above e.g.) is always
-      #  included in new @entries after concatenation.
-      # We don't need call Marker::destroy().
-      # So, we don't need @remove(), simply pop() it.
-      @entries.pop()
-      @entries = @entries.concat tail.reverse()
-
-      # This deletion is depends on preference, make it configurable?
-      # [NOTE] Order is matter, since marker is shallow copied, and when remove(),
-      # it check whether it have reference in @entries.
-      # So removing should be after all concatenation was done.
-      @removeCurrent()
-
+      @concatenate()
       msg.push "Concatenated"
 
     oldMark = @entries[@entries.length-1]
@@ -123,7 +125,6 @@ class History
 
     if @entries.length > @max
       @remove(0, @entries.length - @max)
-
     @index = @entries.length
     @dump(msg.join())
 
