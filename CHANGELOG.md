@@ -1,4 +1,7 @@
-## 0.3.0 - Improve 2015-05-10
+## 0.2.11 - Improve doc.
+* Rewrite history::add() comment.
+
+## 0.2.10 - Improve 2015-05-10
 * More Vim like history concatenation.
 
 ## 0.2.9 - Improve 2015-05-09

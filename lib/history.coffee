@@ -76,29 +76,58 @@ class History
     removedMarkers
 
   # History concatenation mimicking Vim's way.
-  # newMarker(=old position from where you jump to here) is
-  # always added to end of @entries.
-  # And delete marker wich have same row of same file with newMarker.
-  # e.g || indicate @index
-  #  * case-1: Jump from row=7 to row=9 then back with `prev`.
-  #   1. newMarker's row=7
-  #       => [1,3,5,|7|,8]
-  #   2. old 7 is deleted and @index adjusted to point head.
-  #       => [1,3,5,8,7,||]
-  #   3. `prev` from 9 to 7, add 9 to end, @index not adjusted.
-  #       => [1,3,5,8,|7|,9]
+  # newMarker(=old position from where you jump to land here) is
+  # *always* added to end of @entries.
+  # Whenever newMarker is added old Marker wich have same row with
+  # newMarker is removed.
+  # This allows you to get back to old position(row) only once.
   #
-  #  * case-2: jump from row=3 to row=7 then back with `prev`.
-  #   1. newMarker's row=3
-  #       => [1,|3|,5,7,8]
-  #   2. 3 added to end and old 3 is deleted, @index adjusted to point to head.
-  #       => [1,5,7,8,3,||]
-  #   3. `prev` from 7 to 3, add 7 to end, @index not adjusted. old 7 reoved.
-  #       => [1,5,8,|3|,7]
+  #  http://vimhelp.appspot.com/motion.txt.html#jump-motions
+  #
+  # e.g
+  #  1st column: index of @entries
+  #  2nd column: row of each Marker indicate.
+  #  >: indicate @index
+  #
+  # Case-1:
+  #   Jump from row=7 to row=9 then back with `cursor-history:prev`.
+  #
+  #     [1]   [2]    [3]
+  #     0 1   0 1    0 1
+  #     1 3   1 3    1 3
+  #     2 5   2 5    2 5
+  #   > 3 7   3 8    3 8
+  #     4 8   4 7  > 4 7
+  #         >   _    5 9
+  #
+  # 1. Initial State, @index=3(row=7)
+  # 2. Jump from row=7 to row=9, newMarker(row=7) is appended to end
+  #    of @entries then old row=7(@index=3) was deleted.
+  #    @index adjusted to head of @entries(@index = @entries.length).
+  # 3. Back from row=9 to row=7 with `cursor-history:prev`.
+  #    newMarker(row=9) is appended to end of @entries.
+  #    No special @index adjustment.
+  #
+  # Case-2:
+  #  Jump from row=3 to row=7 then back with `cursor-history.prev`.
+  #
+  #     [1]   [2]    [3]
+  #     0 1   0 1    0 1
+  #   > 1 3   1 5    1 5
+  #     2 5   2 7    2 8
+  #     3 7   3 8  > 3 3
+  #     4 8   4 3    4 7
+  #         >   _
+  #
+  # 1. Initial State, @index=1(row=3)
+  # 2. Jump from row=3 to row=7, newMarker(row=3) is appended to end
+  #    of @entries then old row=3(@index=1) was deleted.
+  #    @index adjusted to head of @entries(@index = @entries.length).
+  # 3. Back from row=7 to row=3 with `cursor-history:prev`.
+  #    newMarker(row=7) is appended to end of @entries.
+  #    No special @index adjustment.
+  #
   add: (newMarker, pointToHead=true) ->
-    # Don't keep marker of same row in one file(URI), so that you will get back to
-    # old position(row) only once.
-    # See. http://vimhelp.appspot.com/motion.txt.html#jump-motions
     newRow = newMarker.getStartBufferPosition().row
     newURI = newMarker.getProperties().URI
     for marker, i in @entries
