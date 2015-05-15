@@ -1,5 +1,5 @@
 {CompositeDisposable, TextEditor} = require 'atom'
-CursorHistory = require './history'
+History = require './history'
 path = require 'path'
 
 module.exports =
@@ -30,8 +30,7 @@ module.exports =
 
   activate: (state) ->
     @subscriptions = new CompositeDisposable
-    @history = new CursorHistory atom.config.get('cursor-history.max')
-    @cursorMoveTracking = true
+    @history = new History atom.config.get('cursor-history.max')
 
     @rowDeltaToRemember = atom.config.get 'cursor-history.rowDeltaToRemember'
     @subscriptions.add atom.config.onDidChange 'cursor-history.rowDeltaToRemember', ({newValue}) =>
@@ -47,35 +46,20 @@ module.exports =
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
 
-    @subscriptions.add atom.workspace.observeActivePaneItem (item) =>
-      return unless item instanceof TextEditor
+    @subscriptions.add atom.workspace.observeActivePaneItem @handlePaneChanged.bind(@)
 
-      unless @lastEditor
-        @lastEditor = item
-        return
+  dumpLastEditor: ->
+    URI   = @lastEditor.getURI()
+    point = @lastEditor.getCursorBufferPosition()
+    @debug "lastEditor = #{point} #{URI}, "
 
-      @cursorMoveTracking = false
-
-      URI   = @lastEditor.getURI()
-      point = @lastEditor.getCursorBufferPosition()
-
-      args = [@lastEditor, point, URI]
-
-      @debug "# PaneItem Changed: dir = #{@direction}"
-      @debug " From: #{path.basename(URI)} #{point.toString()}"
-      @debug " To:   #{path.basename(item.getURI())} #{item.getCursorBufferPosition()}"
-
-      if @direction
-        if @direction is 'prev' and @history.isNewest()
-          @debug " -- push to head"
-          @history.pushToHead args...
-        @direction = null
-      else
-        @history.add args...
-
-      @lastEditor = item
+  inspectEditor: (editor) ->
+    URI   = @lastEditor.getURI()
+    point = @lastEditor.getCursorBufferPosition()
+    "#{point} #{path.basename(URI)}"
 
   dump: ->
+    @dumpLastEditor()
     @history.dump '', true
 
   toggleDebug: ->
@@ -90,34 +74,59 @@ module.exports =
   serialize: ->
     @history?.serialize()
 
-  handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
-    unless @cursorMoveTracking
-      @debug " -- Tracking Skip in CursorMoved"
-      @cursorMoveTracking = true
+  handlePaneChanged: (item) ->
+    return unless item instanceof TextEditor
+    return unless item.getURI()
+
+    # We need to track former active pane to know cursor position when active pane was changed.
+    unless @lastEditor
+      @lastEditor = item
       return
 
+    @debug "# PaneItem Changed: dir = #{@direction}"
+    @debug " From: #{@inspectEditor(@lastEditor)}"
+    @debug " To:   #{@inspectEditor(item)}"
+
+    URI   = @lastEditor.getURI()
+    point = @lastEditor.getCursorBufferPosition()
+    @saveHistory @lastEditor, point, URI, => item.getURI() isnt URI
+    @lastEditor = item
+
+  handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
     editor = cursor.editor
     return if editor.hasMultipleCursors()
 
-    args = [editor, oldBufferPosition, editor.getURI()]
+    # [FIXME] currently buffer without URI is simply ignored.
+    # is there any way to support 'untitled' buffer?
+    return unless URI = editor.getURI()
+
+    @debug "CursorMoved #{oldBufferPosition} -> #{newBufferPosition} #{path.basename(URI)}"
+
+    if @lastEditor.getURI() isnt URI
+      # Pane was changed, its handled by observeActivePaneItem()
+      # And here we should return to avoid duplicate save.
+      @debug "JUST MOVED return on cursorMoved"
+      return
+
+    fn = => @needRemember(oldBufferPosition, newBufferPosition, cursor)
+    @saveHistory editor, oldBufferPosition, URI, fn
+
+  saveHistory: (editor, oldBufferPosition, URI, fn) ->
+    args = [editor, oldBufferPosition, URI]
     if @direction
       if @direction is 'prev' and @history.isNewest()
         @history.pushToHead args...
-
       @direction = null
-
-    else if @needRemember.bind(@)(oldBufferPosition, newBufferPosition, cursor)
+    else
+      return unless fn()
       @history.add args...
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
-    # [FIXME] currently buffer without URI is simply ignored.
-    # is there any way to support 'untitled' buffer?
-    return false unless cursor.editor.getURI()
-
     # Line number delata exceeds or not.
     if Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
       return true
-    return false
+    else
+      return false
 
   next:  -> @jump 'next'
   prev:  -> @jump 'prev'
@@ -139,13 +148,13 @@ module.exports =
     @direction = direction
 
     URI = marker.getProperties().URI
-    pos = marker.getStartBufferPosition()
+    point = marker.getStartBufferPosition()
 
     if activeEditor.getURI() is URI
       # Jump within active editor.
-      activeEditor.setCursorBufferPosition pos
-      return
+      activeEditor.setCursorBufferPosition point
 
-    atom.workspace.open(URI, searchAllPanes: true).done (editor) =>
-      # Jump to another another file.
-      editor.setCursorBufferPosition pos
+    else
+      atom.workspace.open(URI, searchAllPanes: true).done (editor) =>
+        # Jump to another another file.
+        editor.setCursorBufferPosition point
