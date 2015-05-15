@@ -1,5 +1,6 @@
 {CompositeDisposable, TextEditor} = require 'atom'
 CursorHistory = require './history'
+path = require 'path'
 
 module.exports =
   history: null
@@ -89,11 +90,6 @@ module.exports =
   serialize: ->
     @history?.serialize()
 
-  # createMarker: (editor, point, properties) ->
-  #   marker = editor.markBufferPosition point, invalidate: 'never', persistent: false
-  #   marker.setProperties properties
-  #   marker
-
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
     unless @cursorMoveTracking
       @debug " -- Tracking Skip in CursorMoved"
@@ -103,8 +99,6 @@ module.exports =
     editor = cursor.editor
     return if editor.hasMultipleCursors()
 
-    # if atom.config.get('cursor-history.debug')
-    #   console.log [oldBufferPosition.toString(), newBufferPosition.toString(), cursor.editor.getURI()]
     args = [editor, oldBufferPosition, editor.getURI()]
     if @direction
       if @direction is 'prev' and @history.isNewest()
@@ -118,7 +112,6 @@ module.exports =
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     # [FIXME] currently buffer without URI is simply ignored.
     # is there any way to support 'untitled' buffer?
-    # console.log [oldBufferPosition, newBufferPosition]
     return false unless cursor.editor.getURI()
 
     # Line number delata exceeds or not.
