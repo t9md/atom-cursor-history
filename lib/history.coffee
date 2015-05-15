@@ -127,11 +127,11 @@ class History
   #    newMarker(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: (newMarker, pointToHead=true) ->
+  add: (editor, point, URI, pointToHead=true) ->
+    newMarker = @createMarker editor, point, {URI}
     newRow = newMarker.getStartBufferPosition().row
     newURI = newMarker.getProperties().URI
     for marker, i in @entries
-      # console.log marker
       URI = marker.getProperties().URI
       row = marker.getStartBufferPosition().row
       if newURI is URI and newRow is row
@@ -153,8 +153,13 @@ class History
       msg = "Push to Head"
     @dump msg
 
-  pushToHead: (marker) ->
-    @add marker, false
+  pushToHead: (editor, point, URI) ->
+    @add editor, point, URI, false
+
+  createMarker: (editor, point, properties) ->
+    marker = editor.markBufferPosition point, invalidate: 'never', persistent: false
+    marker.setProperties properties
+    marker
 
   inspectMarker: (marker) ->
     "#{marker.getStartBufferPosition().toString()}, #{marker.getProperties().URI}"
@@ -164,13 +169,12 @@ class History
       return
 
     console.log "# cursor-history: #{msg}" if msg
-    currentValue = if @getCurrent() then @inspectMarker(@getCurrent()) else @getCurrent()
     entries = @entries.map(
-      ((e, i) ->
+      ((e, i) =>
         if i is @index
           "> #{i}: #{@inspectMarker(e)}"
         else
           "  #{i}: #{@inspectMarker(e)}"), @)
-    entries.push "> #{@index}:" unless currentValue
+    entries.push "> #{@index}:" unless @getCurrent()
 
     console.log entries.join("\n"), "\n\n"

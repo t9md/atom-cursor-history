@@ -1,3 +1,9 @@
+
+未分類
+分類間違い
+
+
+
 # cursor-history
 
 Jump to next and previous cursor position by remembering cursor position history.
