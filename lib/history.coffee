@@ -5,6 +5,44 @@ debug = (msg) ->
   return unless atom.config.get('cursor-history.debug')
   console.log msg
 
+# Wrapper class to wrap Point or Marker.
+# We can't call `editor::markBufferPosition` on destroyed editor.
+# So We need to use Point instead of Marker for destroyed editor.
+class Entry
+  destroyed: false
+  marker: null
+
+  constructor: (@editor, @point, @URI) ->
+    if editor.isAlive()
+      @marker = editor.markBufferPosition @point, invalidate: 'never', persistent: false
+
+  destroy: ->
+    @marker?.destroy()
+    @destroyed = true
+
+  isValid: ->
+    fs.existsSync @URI
+
+  isDestroyed: ->
+    @destroyed
+
+  getPoint: ->
+    if @marker
+      @point = @marker.getStartBufferPosition()
+    @point
+
+  getInfo: ->
+    point = @getPoint()
+    {@URI, point}
+
+  inspect: ->
+    {URI, point} = @getInfo()
+    "#{point}, #{URI}"
+
+  isSameRow: (entry) ->
+    {URI, point} = entry.getInfo()
+    (URI is @URI) and (point.row is @point.row)
+
 module.exports =
 class History
   constructor: (max) -> @initialize max
@@ -23,7 +61,7 @@ class History
   getCurrent:  -> @get @index
   getURI: (index) -> @get(index)?.getProperties().URI
 
-  destroy: ->
+  destroy: -> @clear()
   serialize: () ->
 
   getValid: (direction) ->
@@ -35,12 +73,11 @@ class History
         break if @isOldest()
         @index -= 1
 
-      marker = @getCurrent()
-      URI = marker.getProperties().URI
+      entry = @getCurrent()
 
-      if fs.existsSync URI
+      if entry.isValid()
         @dump direction
-        return marker
+        return entry
 
       debug "URI not exist: #{URI}"
       @removeCurrent()
@@ -64,16 +101,11 @@ class History
   removeCurrent: -> @remove(@index)?[0]
 
   remove: (index, count=1) ->
-    removedMarkers = @entries.splice(index, count)
-
-    # Since we can't simply use Maker::copy(), we copy marker shallowly.
-    # Only if no copy exists in remaining @entries, we can destroy() it.
-    for removedMarker in removedMarkers
-      if _.detect(@entries, (marker) -> removedMarker.isEqual(marker))
-        continue
-      debug "  Destroy: #{@inspectMarker(removedMarker)}"
-      removedMarker.destroy()
-    removedMarkers
+    entries = @entries.splice(index, count)
+    for entry in entries
+      debug "  Destroy: #{entry.inspect()}"
+      entry.destroy()
+    entries
 
   # History concatenation mimicking Vim's way.
   # newMarker(=old position from where you jump to land here) is
@@ -128,20 +160,16 @@ class History
   #    No special @index adjustment.
   #
   add: (editor, point, URI, pointToHead=true) ->
-    newMarker = @createMarker editor, point, {URI}
-    newRow = newMarker.getStartBufferPosition().row
-    newURI = newMarker.getProperties().URI
-    for marker, i in @entries
-      URI = marker.getProperties().URI
-      row = marker.getStartBufferPosition().row
-      if newURI is URI and newRow is row
-        marker.destroy()
-        if (not pointToHead) and (i <= @index)
-          # adjust @index for deletion.
-          @index -= 1
+    newEntry = new Entry(editor, point, URI)
 
-    @entries = _.reject @entries, (marker) -> marker.isDestroyed()
-    @entries.push newMarker
+    for entry, i in @entries
+      if entry.isSameRow newEntry
+        entry.destroy()
+        # adjust @index for deletion.
+        @index -= 1 if i <= @index
+
+    @entries = _.reject @entries, (entry) -> entry.isDestroyed()
+    @entries.push newEntry
 
     if @entries.length > @max
       @remove 0, (@entries.length - @max)
@@ -156,14 +184,6 @@ class History
   pushToHead: (editor, point, URI) ->
     @add editor, point, URI, false
 
-  createMarker: (editor, point, properties) ->
-    marker = editor.markBufferPosition point, invalidate: 'never', persistent: false
-    marker.setProperties properties
-    marker
-
-  inspectMarker: (marker) ->
-    "#{marker.getStartBufferPosition().toString()}, #{marker.getProperties().URI}"
-
   dump: (msg, force=false) ->
     unless force or atom.config.get('cursor-history.debug')
       return
@@ -172,9 +192,9 @@ class History
     entries = @entries.map(
       ((e, i) =>
         if i is @index
-          "> #{i}: #{@inspectMarker(e)}"
+          "> #{i}: #{e.inspect()}"
         else
-          "  #{i}: #{@inspectMarker(e)}"), @)
+          "  #{i}: #{e.inspect()}"), @)
     entries.push "> #{@index}:" unless @getCurrent()
 
     console.log entries.join("\n"), "\n\n"
