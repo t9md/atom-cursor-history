@@ -1,6 +1,8 @@
 {CompositeDisposable, TextEditor} = require 'atom'
 path = require 'path'
 
+LastEditor = require './last-editor'
+
 Config =
   max:
     type: 'integer'
@@ -17,41 +19,13 @@ Config =
     default: false
     description: "Output history on console.log"
 
-# We need to freeze @lastEditor info maunually since
-# `onDidChangeCursorPosition` is triggered asynchronously and
-# not predictable of timing(after/before/in pane changing).
-class LastEditor
-  @destroyedEditors: {}
-
-  @inspectEditor: (editor) ->
-    "#{editor.getCursorBufferPosition()} #{path.basename(editor.getURI())}"
-
-  @saveDestroyedEditor: (editor) ->
-    console.log "Save Destroyed #{@inspectEditor(editor)}"
-    @destroyedEditors[editor.getURI()] = editor.getCursorBufferPosition()
-
-  constructor: (editor) ->
-    @set editor
-    @update()
-
-  set: (@editor) ->
-
-  update: ->
-    if @editor.isAlive()
-      @URI   = @editor.getURI()
-      @point = @editor.getCursorBufferPosition()
-    else
-      console.log "retrieve Destroyed #{@point}, #{path.basename(@URI)}"
-      @point = @constructor.destroyedEditors[@URI]
-
-  getInfo: -> {@URI, @point, @editor}
-
 module.exports =
   history: null
   direction: null
   subscriptions: null
   lastEditor: null
   config: Config
+  locked: false
 
   debug: (msg) ->
     return unless atom.config.get 'cursor-history.debug'
@@ -77,17 +51,18 @@ module.exports =
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
 
+    @subscriptions.add atom.workspace.observeActivePaneItem @handlePaneChanged.bind(@)
+
     @subscriptions.add atom.workspace.onWillDestroyPaneItem ({item}) =>
       if item instanceof TextEditor and item.getURI()
         LastEditor.saveDestroyedEditor item
-
-    @subscriptions.add atom.workspace.observeActivePaneItem @handlePaneChanged.bind(@)
 
   inspectEditor: (editor) ->
     "#{editor.getCursorBufferPosition()} #{path.basename(editor.getURI())}"
 
   dump: ->
     console.log @lastEditor.getInfo().URI
+    # console.log @lastEditor
     @history.dump '', true
 
   toggleDebug: ->
@@ -111,42 +86,32 @@ module.exports =
       @lastEditor = new LastEditor(item)
       return
 
-    @debug "# Pane Changed dir = #{@direction} #{@inspectEditor(@lastEditor.editor)} -> #{@inspectEditor(item)}"
-    @lastEditor.update()
-    {editor, URI, point} = @lastEditor.getInfo()
+    {editor, URI, point} = @lastEditor.update()
+    # {editor, URI, point} = @lastEditor.getInfo()
 
-    # # We save history only if URI(filePath) is different.
-    @saveHistory editor, point, URI, => newURI isnt URI
-    @lastEditor.set item
+    if @isLocked()
+      console.log "locked! ignore pane Change"
+    else
+      if newURI isnt URI
+        # We save history only if URI(filePath) is different.
+        @history.add editor, point, URI
+        @history.dump "[Pane item changed] save history"
+
+    @lastEditor.init item
 
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
+    if @isLocked()
+      console.log "locked! ignore cursor Move"
+      return
+
     editor = cursor.editor
     return if editor.hasMultipleCursors()
-    # [FIXME] Currently buffer without URI is simply ignored.
+    # # [FIXME] Currently buffer without URI is simply ignored.
     return unless URI = editor.getURI()
 
-    @debug "CursorMoved #{oldBufferPosition} -> #{newBufferPosition} #{path.basename(URI)}"
-    lastURI = @lastEditor.getInfo().URI
-    @saveHistory editor, oldBufferPosition, URI, =>
-      console.log [lastURI, URI]
-      if lastURI isnt URI
-        @lastEditor.update()
-        # Just after pane was changed `onDidChangeCursorPosition` is triggered.
-        # But this is not movement within same file(URI) and is movement from another
-        # pane to this pane, we ignore this since saving this is counter intuitive.
-        @debug "# Pane changed, ignore this cursor movement"
-        return false
-      @needRemember(oldBufferPosition, newBufferPosition, cursor)
-
-  saveHistory: (editor, point, URI, suffice) ->
-    args = [editor, point, URI]
-    if @direction
-      if @direction is 'prev' and @history.isNewest()
-        @history.pushToHead args...
-      @direction = null
-    else
-      if suffice()
-        @history.add args...
+    if @needRemember(oldBufferPosition, newBufferPosition, cursor)
+      @history.add editor, oldBufferPosition, URI
+      @history.dump "[Cursor moved] save history"
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     # Line number delata exceeds or not.
@@ -155,31 +120,45 @@ module.exports =
     else
       return false
 
+  getActiveTextEditor: ->
+    atom.workspace.getActiveTextEditor()
+
+  lock:     -> @locked = true
+  unLock:   -> @locked = false
+  isLocked: -> @locked
+
+  clear: -> @history.clear()
+
   next:  -> @jump 'next'
   prev:  -> @jump 'prev'
-  clear: -> @history.clear()
 
   jump: (direction) ->
     # Settings tab is not TextEditor instance.
-    activeEditor = atom.workspace.getActiveTextEditor()
-    return unless activeEditor
+    return unless activeEditor = @getActiveTextEditor()
+    return unless entry = @history[direction]()
 
-    entry = @history[direction]()
-    return unless entry
+    if direction is 'prev' and @history.isNewest()
+      point = activeEditor.getCursorBufferPosition()
+      URI   = activeEditor.getURI()
+      console.log "Push to Head"
+      @history.pushToHead activeEditor, point, URI
 
-    # Used to track why cursor moved.
-    # Order matter, DONT set @direction before `return`.
-    #  - next: by `cursor-history:next` command
-    #  - prev: by `cursor-history:prev` command
-    #  - null: normal movement.
-    @direction = direction
+    @lock()
 
     {URI, point} = entry.getInfo()
     if activeEditor.getURI() is URI
-      # Jump within active editor.
+      # Jump within same pane
       activeEditor.setCursorBufferPosition point
-
+      @unLock()
     else
-      atom.workspace.open(URI, searchAllPanes: true).done (editor) =>
-        # Jump to another another file.
-        editor.setCursorBufferPosition point
+      # Jump to different pane
+      options =
+        initialLine: point.row
+        initialColumn: point.column
+        searchAllPanes: true
+
+      atom.workspace.open(URI, options).done (editor) =>
+        # console.log "opend with another pane"
+        @unLock()
+
+    @history.dump direction

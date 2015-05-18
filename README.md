@@ -36,6 +36,7 @@ Currently when the row delata between old cursor position and new exceeds `rowDe
 I have some idea to make this more granular way.
 
 # TODO
+- [ ] Adjust cursor position after jump to middle of screen.
 - [ ] Support serialization to support per-project cursor history.
 - [ ] Make configurable when history is saved.
 - [x] Won't save history when multiple cursor is used.

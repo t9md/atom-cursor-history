@@ -1,5 +1,6 @@
 ## 0.2.11 - Improve doc.
 * Rewrite history::add() comment.
+* greatly improve for internal structure and fix several bug.
 
 ## 0.2.10 - Improve 2015-05-10
 * More Vim like history concatenation.

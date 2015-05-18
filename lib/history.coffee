@@ -1,47 +1,9 @@
-fs = require 'fs'
 _  = require 'underscore-plus'
+Entry = require './entry'
 
 debug = (msg) ->
   return unless atom.config.get('cursor-history.debug')
   console.log msg
-
-# Wrapper class to wrap Point or Marker.
-# We can't call `editor::markBufferPosition` on destroyed editor.
-# So We need to use Point instead of Marker for destroyed editor.
-class Entry
-  destroyed: false
-  marker: null
-
-  constructor: (@editor, @point, @URI) ->
-    if editor.isAlive()
-      @marker = editor.markBufferPosition @point, invalidate: 'never', persistent: false
-
-  destroy: ->
-    @marker?.destroy()
-    @destroyed = true
-
-  isValid: ->
-    fs.existsSync @URI
-
-  isDestroyed: ->
-    @destroyed
-
-  getPoint: ->
-    if @marker
-      @point = @marker.getStartBufferPosition()
-    @point
-
-  getInfo: ->
-    point = @getPoint()
-    {@URI, point}
-
-  inspect: ->
-    {URI, point} = @getInfo()
-    "#{point}, #{URI}"
-
-  isSameRow: (entry) ->
-    {URI, point} = entry.getInfo()
-    (URI is @URI) and (point.row is @point.row)
 
 module.exports =
 class History
@@ -76,15 +38,12 @@ class History
       entry = @getCurrent()
 
       if entry.isValid()
-        @dump direction
         return entry
 
-      debug "URI not exist: #{URI}"
+      debug "URI not exist: #{entry.URI}"
       @removeCurrent()
       if direction is 'next'
         @index -= 1
-
-    @dump direction
 
   next: ->
     if @isNewest()
@@ -159,7 +118,7 @@ class History
   #    newMarker(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: (editor, point, URI, pointToHead=true) ->
+  add: (editor, point, URI, pointIndexToHead=true) ->
     newEntry = new Entry(editor, point, URI)
 
     for entry, i in @entries
@@ -174,12 +133,8 @@ class History
     if @entries.length > @max
       @remove 0, (@entries.length - @max)
 
-    if pointToHead
+    if pointIndexToHead
       @index = @entries.length
-      msg = "Append"
-    else
-      msg = "Push to Head"
-    @dump msg
 
   pushToHead: (editor, point, URI) ->
     @add editor, point, URI, false
@@ -187,7 +142,6 @@ class History
   dump: (msg, force=false) ->
     unless force or atom.config.get('cursor-history.debug')
       return
-
     console.log "# cursor-history: #{msg}" if msg
     entries = @entries.map(
       ((e, i) =>
@@ -196,5 +150,4 @@ class History
         else
           "  #{i}: #{e.inspect()}"), @)
     entries.push "> #{@index}:" unless @getCurrent()
-
     console.log entries.join("\n"), "\n\n"
