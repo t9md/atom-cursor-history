@@ -1,4 +1,6 @@
-## 0.3.0 - Improve doc.
+## 0.4.1 - Fix version info sorry..
+
+## 0.4.0 - Improve
 * Rewrite history::add() comment.
 * add wrapper class `LastEditor` and `Entry` to handle corner case situation.
 * greatly improve for internal structure and fix several bug.
