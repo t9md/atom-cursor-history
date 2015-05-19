@@ -8,13 +8,17 @@ module.exports =
 class Entry
   destroyed: false
   marker: null
+  disposable: null
 
   constructor: (@editor, @point, @URI) ->
     if @editor.isAlive()
       @marker = @editor.markBufferPosition @point, invalidate: 'never', persistent: false
+      @disposable = @marker.onDidChange ({newHeadBufferPosition}) =>
+        @point = newHeadBufferPosition
 
   destroy: ->
     @marker?.destroy()
+    @disposable?.dispose()
     @destroyed = true
 
   isValid: ->
@@ -23,16 +27,15 @@ class Entry
   isDestroyed: ->
     @destroyed
 
-  getPoint: ->
-    if @editor.isAlive()
-      @point = @marker.getStartBufferPosition()
-    @point
+  # getPoint: ->
+  #   if @editor.isAlive()
+  #     @point = @marker.getStartBufferPosition()
+  #   @point
 
-  getInfo: -> {@URI, point: @getPoint()}
+  getInfo: -> {@URI, @point}
 
   inspect: ->
-    {URI, point} = @getInfo()
-    "#{point}, #{path.basename(URI)}"
+    "#{@point}, #{path.basename(@URI)}"
 
   isSameRow: ({URI, point}) ->
     (URI is @URI) and (point.row is @point.row)

@@ -11,15 +11,25 @@ class LastEditor
   @inspectEditor: (editor) ->
     "#{editor.getCursorBufferPosition()} #{path.basename(editor.getURI())}"
 
+  @rename: (oldURI, newURI) ->
+    for URI, point of @destroyedEditors when URI is oldURI
+      @destroyedEditors[newURI] = point
+      delete @destroyedEditors[URI]
+
   @saveDestroyedEditor: (editor) ->
     # console.log "Save Destroyed #{@inspectEditor(editor)}"
     @destroyedEditors[editor.getURI()] = editor.getCursorBufferPosition()
 
-  constructor: ->
+  constructor: (editor) ->
+    @set editor
 
   set: (@editor) ->
     @URI = @editor.getURI()
     @update()
+
+  rename: (oldURI, newURI) ->
+    @URI = newURI if @URI is oldURI
+    @constructor.rename oldURI, newURI
 
   update: ->
     if @editor.isAlive()

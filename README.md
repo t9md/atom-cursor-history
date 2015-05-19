@@ -2,6 +2,12 @@
 
 Jump to next and previous cursor position by remembering cursor position history.
 
+# Features
+
+* Flash cursor line on land(configurable, disable this feature, or customize color and duration).
+* Can jump to prev/next point even if Buffer is already destroyed.
+* Aware file renaming.
+* Vim like history concatnation(never keep multiple position which have same line in same file, this allow you to jump only once for specific line within one file).
 
 # Keymap
 
@@ -32,12 +38,12 @@ Use following command or set Keymap.
 
 # What condition cursor history will be kept?
 
-Currently when the row delata between old cursor position and new exceeds `rowDeltaToRemember`.  
-I have some idea to make this more granular way.
+* At another file opened(ActiveTextEditor's `getURI()` changed)
+* When the row delata between old cursor position and new exceeds `rowDeltaToRemember`(default 4).  
 
 # TODO
-- [ ] Ensure not open unexisting file.
-- [ ] Flash cursor position cause scroll.
+- [?] Ensure not open unexisting file.
+- [x] Flash cursor position cause scroll.
 - [ ] Adjust cursor position after jump to middle of screen.
 - [ ] Support serialization to support per-project cursor history.
 - [ ] Make configurable when history is saved.

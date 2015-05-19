@@ -7,13 +7,18 @@ debug = (msg) ->
 
 module.exports =
 class History
-  constructor: (max) -> @initialize max
-  clear: -> @initialize @max
+  constructor: (max) ->
+    @initialize max
 
   initialize: (max) ->
     @index   = 0
     @entries = []
     @max     = max
+
+  clear: ->
+    for entry in @entries
+      entry.destroy()
+    @initialize @max
 
   isOldest: -> @isEmpty() or @index is 0
   isNewest: -> @isEmpty() or @index >= @entries.length - 1
@@ -21,9 +26,10 @@ class History
 
   get: (index) -> @entries[index]
   getCurrent:  -> @get @index
-  getURI: (index) -> @get(index)?.getProperties().URI
+  # getURI: (index) -> @get(index)?.getProperties().URI
 
   destroy: -> @clear()
+
   serialize: () ->
 
   getValid: (direction) ->
