@@ -1,4 +1,4 @@
-_  = require 'underscore-plus'
+_     = require 'underscore-plus'
 Entry = require './entry'
 
 debug = (msg) ->
@@ -59,6 +59,10 @@ class History
 
   removeCurrent: -> @remove(@index)?[0]
 
+  rename: (oldURI, newURI) ->
+    for entry in @entries when entry.URI is oldURI
+      entry.URI = newURI
+
   remove: (index, count=1) ->
     entries = @entries.splice(index, count)
     for entry in entries
@@ -66,6 +70,8 @@ class History
       entry.destroy()
     entries
 
+  # rename: (oldURI, , point, URI) ->
+  #   @add editor, point, URI, false
   # History concatenation mimicking Vim's way.
   # newMarker(=old position from where you jump to land here) is
   # *always* added to end of @entries.

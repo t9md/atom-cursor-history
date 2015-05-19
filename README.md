@@ -36,9 +36,13 @@ Currently when the row delata between old cursor position and new exceeds `rowDe
 I have some idea to make this more granular way.
 
 # TODO
+- [ ] Ensure not open unexisting file.
+- [ ] Flash cursor position cause scroll.
 - [ ] Adjust cursor position after jump to middle of screen.
 - [ ] Support serialization to support per-project cursor history.
 - [ ] Make configurable when history is saved.
+- [x] Configurable option to keep current pane on history excursion with `prev`, `next`.
+- [x] Update history entry on pathChange(`onDidChangePath`).
 - [x] Won't save history when multiple cursor is used.
 - [x] Use oldBufferPosition rather than newBufferPosition to save.
 - [x] Exclude inValid Marker. deleted File(URI).

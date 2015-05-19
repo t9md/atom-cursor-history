@@ -1,4 +1,4 @@
-fs = require 'fs'
+fs   = require 'fs'
 path = require 'path'
 
 # Wrapper class to wrap Point or Marker.
@@ -10,20 +10,28 @@ class Entry
   marker: null
 
   constructor: (@editor, @point, @URI) ->
-    if editor.isAlive()
-      @marker = editor.markBufferPosition @point, invalidate: 'never', persistent: false
+    if @editor.isAlive()
+      @marker = @editor.markBufferPosition @point, invalidate: 'never', persistent: false
 
   destroy: ->
     @marker?.destroy()
     @destroyed = true
 
-  isValid: -> fs.existsSync @URI
-  isDestroyed: -> @destroyed
+  isValid: ->
+    fs.existsSync @URI
+
+  isDestroyed: ->
+    @destroyed
 
   getPoint: ->
-    if @marker
+    if @editor.isAlive()
       @point = @marker.getStartBufferPosition()
     @point
+
+  # getURI: ->
+  #   if @editor.isAlive()
+  #     @point = @marker.getStartBufferPosition()
+  #   @URI
 
   getInfo: -> {@URI, point: @getPoint()}
 
@@ -31,6 +39,5 @@ class Entry
     {URI, point} = @getInfo()
     "#{point}, #{path.basename(URI)}"
 
-  isSameRow: (entry) ->
-    {URI, point} = entry.getInfo()
+  isSameRow: ({URI, point}) ->
     (URI is @URI) and (point.row is @point.row)

@@ -1,7 +1,9 @@
 path = require 'path'
-# We need to freeze @lastEditor info maunually since
-# `onDidChangeCursorPosition` is triggered asynchronously and
-# not predictable of timing(after/before/in pane changing).
+
+# We cant' call getCursorBufferPosition() on destroyed TextEditor.
+# So this LastEditor provide consitent way to get latest cursor position
+# by wrapping Alive() editor and destroyed editor.
+
 module.exports =
 class LastEditor
   @destroyedEditors: {}
@@ -10,13 +12,12 @@ class LastEditor
     "#{editor.getCursorBufferPosition()} #{path.basename(editor.getURI())}"
 
   @saveDestroyedEditor: (editor) ->
-    console.log "Save Destroyed #{@inspectEditor(editor)}"
+    # console.log "Save Destroyed #{@inspectEditor(editor)}"
     @destroyedEditors[editor.getURI()] = editor.getCursorBufferPosition()
 
-  constructor: (editor) ->
-    @init editor
+  constructor: ->
 
-  init: (@editor) ->
+  set: (@editor) ->
     @URI = @editor.getURI()
     @update()
 
@@ -27,6 +28,6 @@ class LastEditor
       @point = @constructor.destroyedEditors[@URI]
       console.log "retrieve Destroyed #{@point}, #{path.basename(@URI)}"
 
-    @getInfo()
-
-  getInfo: -> {@URI, @point, @editor}
+  getInfo: ->
+    @update()
+    {@URI, @point, @editor}

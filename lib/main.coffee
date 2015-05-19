@@ -1,6 +1,7 @@
 {CompositeDisposable, TextEditor} = require 'atom'
 path = require 'path'
 
+History    = require './history'
 LastEditor = require './last-editor'
 
 Config =
@@ -18,23 +19,21 @@ Config =
     type: 'boolean'
     default: false
     description: "Output history on console.log"
+  keepPane:
+    type: 'boolean'
+    default: false
+    description: "Open history entry always on same pane."
 
 module.exports =
+  config: Config
   history: null
-  direction: null
   subscriptions: null
   lastEditor: null
-  config: Config
   locked: false
-
-  debug: (msg) ->
-    return unless atom.config.get 'cursor-history.debug'
-    console.log msg
 
   activate: (state) ->
     @subscriptions = new CompositeDisposable
 
-    History = require './history'
     @history = new History atom.config.get('cursor-history.max')
 
     @rowDeltaToRemember = atom.config.get 'cursor-history.rowDeltaToRemember'
@@ -49,65 +48,53 @@ module.exports =
       'cursor-history:toggle-debug': => @toggleDebug()
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
+      orgURI = editor.getURI()
+
+      @subscriptions.add editor.onDidChangePath =>
+        newURI = editor.getURI()
+        @history.rename orgURI, newURI
+        orgURI = newURI
+
       @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
 
-    @subscriptions.add atom.workspace.observeActivePaneItem @handlePaneChanged.bind(@)
+    @subscriptions.add atom.workspace.observeActivePaneItem (item) =>
+      if item instanceof TextEditor and item.getURI()
+        @handlePaneItemChanged item
 
     @subscriptions.add atom.workspace.onWillDestroyPaneItem ({item}) =>
       if item instanceof TextEditor and item.getURI()
         LastEditor.saveDestroyedEditor item
 
-  inspectEditor: (editor) ->
-    "#{editor.getCursorBufferPosition()} #{path.basename(editor.getURI())}"
-
-  dump: ->
-    console.log @lastEditor.getInfo().URI
-    # console.log @lastEditor
-    @history.dump '', true
-
-  toggleDebug: ->
-    atom.config.toggle 'cursor-history.debug'
-    state = atom.config.get('cursor-history.debug') and "enabled" or "disabled"
-    console.log "cursor-history: debug #{state}"
-
-  deactivate: ->
-    @subscriptions.dispose()
-    @history?.destroy()
-
-  serialize: ->
-    @history?.serialize()
-
-  handlePaneChanged: (item) ->
-    return unless item instanceof TextEditor
-    return unless newURI = item.getURI()
-
+  handlePaneItemChanged: (item) ->
     # We need to track former active pane to know cursor position when active pane was changed.
     unless @lastEditor
-      @lastEditor = new LastEditor(item)
+      @lastEditor = new LastEditor
+      @lastEditor.set item
       return
 
-    {editor, URI, point} = @lastEditor.update()
-    # {editor, URI, point} = @lastEditor.getInfo()
+    {editor, point, URI: lastURI} = @lastEditor.getInfo()
 
     if @isLocked()
-      console.log "locked! ignore pane Change"
-    else
-      if newURI isnt URI
-        # We save history only if URI(filePath) is different.
-        @history.add editor, point, URI
-        @history.dump "[Pane item changed] save history"
+      @debug "locked! ignore pane Change"
 
-    @lastEditor.init item
+    else if lastURI isnt item.getURI()
+      @history.add editor, point, lastURI
+      @history.dump "[Pane item changed] save history"
+
+    @lastEditor.set item
 
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
     if @isLocked()
-      console.log "locked! ignore cursor Move"
+      @debug "locked! ignore cursor Move"
       return
 
     editor = cursor.editor
-    return if editor.hasMultipleCursors()
-    # # [FIXME] Currently buffer without URI is simply ignored.
-    return unless URI = editor.getURI()
+    if editor.hasMultipleCursors()
+      return
+
+    unless URI = editor.getURI()
+      # # [FIXME] Currently buffer without URI is simply ignored.
+      return
 
     if @needRemember(oldBufferPosition, newBufferPosition, cursor)
       @history.add editor, oldBufferPosition, URI
@@ -119,9 +106,6 @@ module.exports =
       return true
     else
       return false
-
-  getActiveTextEditor: ->
-    atom.workspace.getActiveTextEditor()
 
   lock:     -> @locked = true
   unLock:   -> @locked = false
@@ -146,19 +130,45 @@ module.exports =
     @lock()
 
     {URI, point} = entry.getInfo()
+
     if activeEditor.getURI() is URI
       # Jump within same pane
       activeEditor.setCursorBufferPosition point
       @unLock()
+
     else
       # Jump to different pane
       options =
         initialLine: point.row
         initialColumn: point.column
-        searchAllPanes: true
+        searchAllPanes: !atom.config.get('cursor-history.keepPane')
 
       atom.workspace.open(URI, options).done (editor) =>
-        # console.log "opend with another pane"
         @unLock()
 
     @history.dump direction
+
+  deactivate: ->
+    @subscriptions.dispose()
+    @history?.destroy()
+
+  serialize: ->
+    @history?.serialize()
+
+  debug: (msg) ->
+    return unless atom.config.get 'cursor-history.debug'
+    console.log msg
+
+  inspectEditor: (editor) ->
+    "#{editor.getCursorBufferPosition()} #{path.basename(editor.getURI())}"
+
+  getActiveTextEditor: ->
+    atom.workspace.getActiveTextEditor()
+
+  dump: ->
+    @history.dump '', true
+
+  toggleDebug: ->
+    atom.config.toggle 'cursor-history.debug'
+    state = atom.config.get('cursor-history.debug') and "enabled" or "disabled"
+    console.log "cursor-history: debug #{state}"

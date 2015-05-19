@@ -1,6 +1,10 @@
-## 0.2.11 - Improve doc.
+## 0.3.0 - Improve doc.
 * Rewrite history::add() comment.
+* add wrapper class `LastEditor` and `Entry` to handle corner case situation.
 * greatly improve for internal structure and fix several bug.
+* Configurable option to keep current pane on history excursion with `prev`, `next`.
+* Update history entry on pathChange(`onDidChangePath`).
+* More precise handling on ActivePaneItem and CursorMoved event.
 
 ## 0.2.10 - Improve 2015-05-10
 * More Vim like history concatenation.
