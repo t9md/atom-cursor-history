@@ -79,10 +79,10 @@ module.exports =
 
     @subscriptions.add @onDidJumpToHistory (direction) =>
       @unLock()
-      @highlightCursorLine() if atom.config.get('cursor-history.flashOnJump')
+      @flashCursorLine() if atom.config.get('cursor-history.flashOnJump')
       @history.dump direction
 
-  highlightCursorLine: ->
+  flashCursorLine: ->
     activeEditor = @getActiveTextEditor()
     range = activeEditor.getSelectedBufferRange()
     marker = activeEditor.markBufferRange range,
