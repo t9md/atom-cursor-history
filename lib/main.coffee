@@ -124,7 +124,7 @@ module.exports =
     if direction is 'prev' and @history.isNewest()
       point = activeEditor.getCursorBufferPosition()
       URI   = activeEditor.getURI()
-      console.log "Push to Head"
+      # console.log "Push to Head"
       @history.pushToHead activeEditor, point, URI
 
     @lock()

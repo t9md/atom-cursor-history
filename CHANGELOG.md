@@ -1,3 +1,5 @@
+## 0.4.2 - Fix deub print.
+
 ## 0.4.1 - Fix version info sorry..
 
 ## 0.4.0 - Improve

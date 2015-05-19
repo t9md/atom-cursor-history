@@ -28,11 +28,6 @@ class Entry
       @point = @marker.getStartBufferPosition()
     @point
 
-  # getURI: ->
-  #   if @editor.isAlive()
-  #     @point = @marker.getStartBufferPosition()
-  #   @URI
-
   getInfo: -> {@URI, point: @getPoint()}
 
   inspect: ->

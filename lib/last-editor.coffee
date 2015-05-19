@@ -26,7 +26,7 @@ class LastEditor
       @point = @editor.getCursorBufferPosition()
     else
       @point = @constructor.destroyedEditors[@URI]
-      console.log "retrieve Destroyed #{@point}, #{path.basename(@URI)}"
+      # console.log "retrieve Destroyed #{@point}, #{path.basename(@URI)}"
 
   getInfo: ->
     @update()
