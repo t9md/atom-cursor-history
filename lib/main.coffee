@@ -3,42 +3,10 @@ path = require 'path'
 
 History    = require './history'
 LastEditor = require './last-editor'
-
-Config =
-  max:
-    type: 'integer'
-    default: 100
-    minimum: 1
-    description: "number of history to remember"
-  rowDeltaToRemember:
-    type: 'integer'
-    default: 4
-    minimum: 0
-    description: "Only if dirrerence of cursor row exceed this value, cursor position is saved to history"
-  debug:
-    type: 'boolean'
-    default: false
-    description: "Output history on console.log"
-  keepPane:
-    type: 'boolean'
-    default: false
-    description: "Open history entry always on same pane."
-  flashOnJump:
-    type: 'boolean'
-    default: false
-    description: "flash line on jump to history point"
-  flashDurationMilliSeconds:
-    type: 'integer'
-    default: 200
-    description: "Duration for flash"
-  flashColor:
-    type: 'string'
-    default: 'info'
-    enum: ['info', 'success', 'warning', 'error', 'highlight', 'selected']
-    description: 'flash color style, correspoinding to @background-color-#{flashColor}: see `styleguide:show`'
+settings   = require './settings'
 
 module.exports =
-  config: Config
+  config: settings.config
   history: null
   subscriptions: null
   lastEditor: null
@@ -47,9 +15,9 @@ module.exports =
   activate: (state) ->
     @subscriptions = new CompositeDisposable
     @emitter       = new Emitter
-    @history       = new History atom.config.get('cursor-history.max')
+    @history       = new History settings.max()
 
-    @rowDeltaToRemember = atom.config.get 'cursor-history.rowDeltaToRemember'
+    @rowDeltaToRemember = settings.rowDeltaToRemember()
     @subscriptions.add atom.config.onDidChange 'cursor-history.rowDeltaToRemember', ({newValue}) =>
       @rowDeltaToRemember = newValue
 
@@ -62,8 +30,6 @@ module.exports =
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @handleChangePath(editor)
-      # orgURI = editor.getURI()
-
       @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
 
     @subscriptions.add atom.workspace.observeActivePaneItem (item) =>
@@ -79,7 +45,7 @@ module.exports =
 
     @subscriptions.add @onDidJumpToHistory (direction) =>
       @unLock()
-      @flashCursorLine() if atom.config.get('cursor-history.flashOnJump')
+      @flashCursorLine() if settings.flashOnJump()
       @history.dump direction
 
   flashCursorLine: ->
@@ -89,14 +55,14 @@ module.exports =
       invalidate: 'never'
       persistent: false
 
-    color = atom.config.get('cursor-history.flashColor')
+    color = settings.flashColor()
     decoration = activeEditor.decorateMarker marker,
       type: 'line'
       class: "cursor-history-#{color}"
 
     setTimeout  ->
       decoration.getMarker().destroy()
-    , atom.config.get('cursor-history.flashDurationMilliSeconds')
+    , settings.flashDurationMilliSeconds()
 
   onWillJumpToHistory: (callback) ->
     @emitter.on 'will-jump-to-history', callback
@@ -175,7 +141,11 @@ module.exports =
 
     if activeEditor.getURI() is URI
       # Jump within same pane
-      activeEditor.setCursorBufferPosition point
+      # Intentionally disable `autoscroll` to set cursor position middle of
+      # screen afterward.
+      activeEditor.setCursorBufferPosition point, autoscroll: false
+      # Adjust cursor position to middle of screen.
+      activeEditor.scrollToCursorPosition()
       @emitter.emit 'did-jump-to-history', direction
 
     else
@@ -183,7 +153,7 @@ module.exports =
       options =
         initialLine: point.row
         initialColumn: point.column
-        searchAllPanes: !atom.config.get('cursor-history.keepPane')
+        searchAllPanes: !settings.keepPane()
 
       atom.workspace.open(URI, options).done (editor) =>
         @emitter.emit 'did-jump-to-history', direction
@@ -199,7 +169,7 @@ module.exports =
     @history?.serialize()
 
   debug: (msg) ->
-    return unless atom.config.get 'cursor-history.debug'
+    return unless settings.debug()
     console.log msg
 
   inspectEditor: (editor) ->
@@ -212,6 +182,7 @@ module.exports =
     @history.dump '', true
 
   toggleDebug: ->
-    atom.config.toggle 'cursor-history.debug'
-    state = atom.config.get('cursor-history.debug') and "enabled" or "disabled"
+    settings.debug('toggle')
+    # atom.config.toggle 'cursor-history.debug'
+    state = settings.debug() and "enabled" or "disabled"
     console.log "cursor-history: debug #{state}"

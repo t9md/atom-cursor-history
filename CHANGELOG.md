@@ -1,4 +1,10 @@
-## 0.4.2 - Fix deub print.
+## 0.4.3 - Fix deubug print.
+* Flash cursor line on landing.
+* Independent setgings class.
+* settings option ordered.
+* Set cursor position to middle of screen if target was off-screen.
+
+## 0.4.2 - Fix deubug print.
 
 ## 0.4.1 - Fix version info sorry..
 

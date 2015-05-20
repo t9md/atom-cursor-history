@@ -8,6 +8,7 @@ Jump to next and previous cursor position by remembering cursor position history
 * Can jump to prev/next point even if Buffer is already destroyed.
 * Aware file renaming.
 * Vim like history concatnation(never keep multiple position which have same line in same file, this allow you to jump only once for specific line within one file).
+* Auto adjust cursor position to middle of screen if target was off-screen.
 
 # Keymap
 
