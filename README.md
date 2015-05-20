@@ -1,13 +1,15 @@
 # cursor-history
 
-Jump to next and previous cursor position by remembering cursor position history.
+Jump to next and previous cursor position by keeping track of cursor position.
+
+![gif](https://raw.githubusercontent.com/t9md/t9md/8b86b09ff01f3dbb45324119cfd41c39f16b115e/img/atom-cursor-history.gif)
 
 # Features
 
-* Flash cursor line on land(configurable, disable this feature, or customize color and duration).
-* Can jump to prev/next point even if Buffer is already destroyed.
+* Flash cursor line on land(configurable, disable/enable and can customize fash color and duration).
+* Can jump to prev/next point even if Buffer have already destroyed.
 * Aware file renaming.
-* Vim like history concatnation(never keep multiple position which have same line in same file, this allow you to jump only once for specific line within one file).
+* Vim like history concatnation(Never save same line per file. This allow you to jump specific line only once).
 * Auto adjust cursor position to middle of screen if target was off-screen.
 
 # Keymap
@@ -28,31 +30,34 @@ No keymap by default.
 'atom-text-editor.vim-mode.command-mode':
   'ctrl-i': 'cursor-history:next'
   'ctrl-o': 'cursor-history:prev'
+  # or
+  ']': 'cursor-history:next'
+  '[': 'cursor-history:prev'
 ```
 
 # How to use
 
 Use following command or set Keymap.
-* `cursor-history:next`: Go to next     point in history.
+* `cursor-history:next`: Go to next point in history.
 * `cursor-history:prev`: Go to previous point in history.
-* `cursor-history:clear`: Clear history when you are in trouble.
+* `cursor-history:clear`: Clear history.
 
 # What condition cursor history will be kept?
 
-* At another file opened(ActiveTextEditor's `getURI()` changed)
-* When the row delata between old cursor position and new exceeds `rowDeltaToRemember`(default 4).  
+On following event, cursor position just before the event is saved to history.
+* When another file opened(ActiveTextEditor's `getURI()` changed)
+* When the row delta between old and new cursor position exceeds `rowDeltaToRemember`(default 4).  
 
 # TODO
-- [?] Ensure not open unexisting file.
-- [x] Flash cursor position cause scroll.
-- [ ] Adjust cursor position after jump to middle of screen.
 - [ ] Support serialization to support per-project cursor history.
-- [ ] Make configurable when history is saved.
+- [x] Ensure not open un-existing file.
+- [x] Flash cursor line when target is off-screen.
+- [x] Adjust cursor position after jump to middle of screen.
 - [x] Configurable option to keep current pane on history excursion with `prev`, `next`.
-- [x] Update history entry on pathChange(`onDidChangePath`).
-- [x] Won't save history when multiple cursor is used.
+- [x] Update history entry on file rename(`onDidChangePath`).
+- [x] Don't save history when multiple cursors.
 - [x] Use oldBufferPosition rather than newBufferPosition to save.
 - [x] Exclude inValid Marker. deleted File(URI).
-- [x] Better history concatenation.
-- [x] Use Maker instead of buffer position.
-- [x] More precise handling when active TextEditor change
+- [x] Better history concatenation(Vim-like).
+- [x] Use Marker if I can, use Point for destroyed editor to avoid error.
+- [x] Save history on ActiveTextEditor change.

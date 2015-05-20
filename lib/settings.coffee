@@ -13,11 +13,11 @@ config =
     default: 4
     minimum: 0
     description: "Only if dirrerence of cursor row exceed this value, cursor position is saved to history"
-  keepPane:
+  searchAllPanes:
     order: 3
     type: 'boolean'
-    default: false
-    description: "Open history entry always on same pane."
+    default: true
+    description: "Land to another pane or stick to same pane"
   flashOnLand:
     order: 4
     type: 'boolean'

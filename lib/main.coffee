@@ -122,7 +122,6 @@ module.exports =
     if direction is 'prev' and @history.isNewest()
       point = activeEditor.getCursorBufferPosition()
       URI   = activeEditor.getURI()
-      # console.log "Push to Head"
       @history.pushToHead activeEditor, point, URI
 
     @emitter.emit 'will-jump-to-history', direction
@@ -131,6 +130,7 @@ module.exports =
 
     if activeEditor.getURI() is URI
       # Jump within same pane
+      
       # Intentionally disable `autoscroll` to set cursor position middle of
       # screen afterward.
       activeEditor.setCursorBufferPosition point, autoscroll: false
@@ -143,7 +143,7 @@ module.exports =
       options =
         initialLine: point.row
         initialColumn: point.column
-        searchAllPanes: !settings.get('keepPane')
+        searchAllPanes: settings.get('searchAllPanes')
 
       atom.workspace.open(URI, options).done (editor) =>
         @emitter.emit 'did-jump-to-history', direction
@@ -174,6 +174,5 @@ module.exports =
 
   toggleDebug: ->
     settings.toggle('debug')
-    # atom.config.toggle 'cursor-history.debug'
     state = settings.get('debug') and "enabled" or "disabled"
     console.log "cursor-history: debug #{state}"

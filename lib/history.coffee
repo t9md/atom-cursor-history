@@ -1,8 +1,9 @@
 _     = require 'underscore-plus'
 Entry = require './entry'
+settings = require './settings'
 
 debug = (msg) ->
-  return unless atom.config.get('cursor-history.debug')
+  return unless settings.get('debug')
   console.log msg
 
 module.exports =
@@ -152,7 +153,7 @@ class History
     @add editor, point, URI, false
 
   dump: (msg, force=false) ->
-    unless force or atom.config.get('cursor-history.debug')
+    unless force or settings.get('debug')
       return
     console.log "# cursor-history: #{msg}" if msg
     entries = @entries.map(

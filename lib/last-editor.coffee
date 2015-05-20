@@ -8,16 +8,12 @@ module.exports =
 class LastEditor
   @destroyedEditors: {}
 
-  @inspectEditor: (editor) ->
-    "#{editor.getCursorBufferPosition()} #{path.basename(editor.getURI())}"
-
   @rename: (oldURI, newURI) ->
     for URI, point of @destroyedEditors when URI is oldURI
       @destroyedEditors[newURI] = point
       delete @destroyedEditors[URI]
 
   @saveDestroyedEditor: (editor) ->
-    # console.log "Save Destroyed #{@inspectEditor(editor)}"
     @destroyedEditors[editor.getURI()] = editor.getCursorBufferPosition()
 
   constructor: (editor) ->
