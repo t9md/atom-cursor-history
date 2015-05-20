@@ -3,6 +3,7 @@ path = require 'path'
 
 History    = require './history'
 LastEditor = require './last-editor'
+Flasher    = require './flasher'
 settings   = require './settings'
 
 module.exports =
@@ -15,10 +16,10 @@ module.exports =
   activate: (state) ->
     @subscriptions = new CompositeDisposable
     @emitter       = new Emitter
-    @history       = new History settings.max()
+    @history       = new History settings.get('max')
 
-    @rowDeltaToRemember = settings.rowDeltaToRemember()
-    @subscriptions.add atom.config.onDidChange 'cursor-history.rowDeltaToRemember', ({newValue}) =>
+    @rowDeltaToRemember = settings.get('rowDeltaToRemember')
+    settings.onDidChange 'rowDeltaToRemember', ({newValue}) =>
       @rowDeltaToRemember = newValue
 
     atom.commands.add 'atom-workspace',
@@ -45,24 +46,14 @@ module.exports =
 
     @subscriptions.add @onDidJumpToHistory (direction) =>
       @unLock()
-      @flashCursorLine() if settings.flashOnJump()
+      @flashCursorLine() if settings.get('flashOnLand')
       @history.dump direction
 
   flashCursorLine: ->
-    activeEditor = @getActiveTextEditor()
-    range = activeEditor.getSelectedBufferRange()
-    marker = activeEditor.markBufferRange range,
-      invalidate: 'never'
-      persistent: false
-
-    color = settings.flashColor()
-    decoration = activeEditor.decorateMarker marker,
-      type: 'line'
-      class: "cursor-history-#{color}"
-
-    setTimeout  ->
-      decoration.getMarker().destroy()
-    , settings.flashDurationMilliSeconds()
+    editor = @getActiveTextEditor()
+    range = editor.getSelectedBufferRange()
+    Flasher.clear()
+    Flasher.flash editor, range
 
   onWillJumpToHistory: (callback) ->
     @emitter.on 'will-jump-to-history', callback
@@ -78,7 +69,6 @@ module.exports =
       @history.rename orgURI, newURI
       @lastEditor.rename orgURI, newURI
       orgURI = newURI
-
 
   handlePaneItemChanged: (item) ->
     # We need to track former active pane to know cursor position when active pane was changed.
@@ -135,7 +125,7 @@ module.exports =
       # console.log "Push to Head"
       @history.pushToHead activeEditor, point, URI
 
-    @emitter.emit 'will-jump-to-history'
+    @emitter.emit 'will-jump-to-history', direction
 
     {URI, point} = entry.getInfo()
 
@@ -153,7 +143,7 @@ module.exports =
       options =
         initialLine: point.row
         initialColumn: point.column
-        searchAllPanes: !settings.keepPane()
+        searchAllPanes: !settings.get('keepPane')
 
       atom.workspace.open(URI, options).done (editor) =>
         @emitter.emit 'did-jump-to-history', direction
@@ -162,6 +152,7 @@ module.exports =
 
   deactivate: ->
     @subscriptions.dispose()
+    settings.dispose()
     @history?.destroy()
     @history = null
 
@@ -169,7 +160,7 @@ module.exports =
     @history?.serialize()
 
   debug: (msg) ->
-    return unless settings.debug()
+    return unless settings.get('debug')
     console.log msg
 
   inspectEditor: (editor) ->
@@ -182,7 +173,7 @@ module.exports =
     @history.dump '', true
 
   toggleDebug: ->
-    settings.debug('toggle')
+    settings.toggle('debug')
     # atom.config.toggle 'cursor-history.debug'
-    state = settings.debug() and "enabled" or "disabled"
+    state = settings.get('debug') and "enabled" or "disabled"
     console.log "cursor-history: debug #{state}"

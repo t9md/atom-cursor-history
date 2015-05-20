@@ -1,6 +1,6 @@
 ## 0.4.3 - Fix deubug print.
 * Flash cursor line on landing.
-* Independent setgings class.
+* Independent setgings object and utility functions.
 * settings option ordered.
 * Set cursor position to middle of screen if target was off-screen.
 
