@@ -34,7 +34,9 @@ module.exports =
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @handleChangePath(editor)
-      @subscriptions.add editor.onDidChangeCursorPosition @handleCursorMoved.bind(@)
+      @subscriptions.add editor.onDidChangeCursorPosition (event) =>
+        return if @isLocked()
+        @handleCursorMoved event
 
     @subscriptions.add atom.workspace.observeActivePaneItem (item) =>
       if item instanceof TextEditor and item.getURI()
@@ -64,22 +66,16 @@ module.exports =
   handlePaneItemChanged: (item) ->
     # We need to track former active pane to know cursor position when active pane was changed.
     @lastEditor ?= new LastEditor(item)
+
     {editor, point, URI: lastURI} = @lastEditor.getInfo()
-
-    if @isLocked()
-      @debug "locked! ignore pane Change"
-
-    else if lastURI isnt item.getURI()
+    if not @isLocked() and (lastURI isnt item.getURI())
       @history.add editor, point, lastURI
       @history.dump "[Pane item changed] save history"
 
     @lastEditor.set item
+    @debug "set LastEditor #{path.basename(item.getURI())}"
 
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
-    if @isLocked()
-      @debug "locked! ignore cursor Move"
-      return
-
     editor = cursor.editor
     return if editor.hasMultipleCursors()
     return unless URI = editor.getURI()
@@ -98,15 +94,15 @@ module.exports =
 
   clear: -> @history.clear()
 
-  next: -> @jump 'next'
-  prev: -> @jump 'prev'
+  next: -> @jump 'Next'
+  prev: -> @jump 'Prev'
 
   jump: (direction) ->
     # Settings tab is not TextEditor instance.
     return unless activeEditor = @getActiveTextEditor()
-    return unless entry = @history[direction]()
+    return unless entry = @history["get#{direction}"]()
 
-    if direction is 'prev' and @history.isNewest()
+    if direction is 'Prev' and @history.isNewest()
       point = activeEditor.getCursorBufferPosition()
       URI   = activeEditor.getURI()
       @history.pushToHead activeEditor, point, URI

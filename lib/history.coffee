@@ -35,10 +35,10 @@ class History
 
   getValid: (direction) ->
     until @isEmpty()
-      if direction is 'next'
+      if direction is 'Next'
         break if @isNewest()
         @index += 1
-      else if direction is 'prev'
+      else if direction is 'Prev'
         break if @isOldest()
         @index -= 1
 
@@ -47,22 +47,22 @@ class History
       if entry.isValid()
         return entry
 
-      debug "URI not exist: #{entry.URI}"
+      debug "URI not exist: #{entry.URI} or Buffer closed"
       @removeCurrent()
-      if direction is 'next'
+      if direction is 'Next'
         @index -= 1
 
-  next: ->
+  getNext: ->
     if @isNewest()
       @dump "Newest"
       return
-    @getValid 'next'
+    @getValid 'Next'
 
-  prev: ->
+  getPrev: ->
     if @isOldest()
       @dump "Oldest"
       return
-    @getValid 'prev'
+    @getValid 'Prev'
 
   removeCurrent: -> @remove(@index)?[0]
 

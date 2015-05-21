@@ -7,7 +7,7 @@ Jump to next and previous cursor position by keeping track of cursor position.
 # Features
 
 * Flash cursor line on land. Can disable or customize flash color, duration and type(line, word, point).
-* Can jump to prev/next point even if Buffer have already been destroyed.
+* Can jump to prev/next point of closed Buffer(can configure exclude closed).
 * Aware file renaming.
 * Vim like history concatnation(Never save same line per file. This allow you to jump specific line only once).
 * Auto adjust cursor position to middle of screen if target was off-screen.
@@ -50,6 +50,7 @@ On following event, cursor position just before the event is saved to history.
 
 # TODO
 - [ ] Support serialization to support per-project cursor history.
+- [x] Configuration option to exclude closed buffer.
 - [x] Ensure not open un-existing file.
 - [x] Flash cursor line when target is off-screen.
 - [x] Adjust cursor position after jump to middle of screen.

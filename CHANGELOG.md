@@ -1,3 +1,7 @@
+## 0.4.6 - Fix and Feature
+* New option `excludeClosedBuffer` false by default.
+* [Fix] `prev` should `Prev`. prev was not worked when back from head.
+
 ## 0.4.5 - Fix
 * Debug mode not working since debug() is un-intentionally deleted
 
