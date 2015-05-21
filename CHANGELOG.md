@@ -1,3 +1,6 @@
+## 0.4.5 - Fix
+* Debug mode not working since debug() is un-intentionally deleted
+
 ## 0.4.4 - Improve
 * Now configurable `FlashType` from 'line', 'word', 'point'
 
