@@ -13,6 +13,9 @@ module.exports =
   lastEditor: null
   locked: false
 
+  onWillJumpToHistory: (callback) -> @emitter.on 'will-jump-to-history', callback
+  onDidJumpToHistory:  (callback) -> @emitter.on 'did-jump-to-history', callback
+
   activate: (state) ->
     @subscriptions = new CompositeDisposable
     @emitter       = new Emitter
@@ -48,12 +51,6 @@ module.exports =
       @unLock()
       Flasher.flash() if settings.get('flashOnLand')
       @history.dump direction
-
-  onWillJumpToHistory: (callback) ->
-    @emitter.on 'will-jump-to-history', callback
-
-  onDidJumpToHistory: (callback) ->
-    @emitter.on 'did-jump-to-history', callback
 
   handleChangePath: (editor) ->
     orgURI = editor.getURI()
@@ -93,20 +90,16 @@ module.exports =
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     # Line number delata exceeds or not.
-    if Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
-      return true
-    else
-      return false
+    Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
 
   lock:     -> @locked = true
   unLock:   -> @locked = false
   isLocked: -> @locked
 
-  clear: ->
-    @history.clear()
+  clear: -> @history.clear()
 
-  next:  -> @jump 'next'
-  prev:  -> @jump 'prev'
+  next: -> @jump 'next'
+  prev: -> @jump 'prev'
 
   jump: (direction) ->
     # Settings tab is not TextEditor instance.
@@ -150,15 +143,12 @@ module.exports =
     @history?.destroy()
     @history = null
 
-  serialize: ->
-    @history?.serialize()
-
   debug: (msg) ->
     return unless settings.get('debug')
     console.log msg
 
-  inspectEditor: (editor) ->
-    "#{editor.getCursorBufferPosition()} #{path.basename(editor.getURI())}"
+  serialize: ->
+    @history?.serialize()
 
   getActiveTextEditor: ->
     atom.workspace.getActiveTextEditor()

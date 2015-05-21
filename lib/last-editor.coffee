@@ -21,18 +21,16 @@ class LastEditor
 
   set: (@editor) ->
     @URI = @editor.getURI()
-    @update()
 
   rename: (oldURI, newURI) ->
     @URI = newURI if @URI is oldURI
     @constructor.rename oldURI, newURI
 
-  update: ->
+  getPoint: ->
     if @editor.isAlive()
-      @point = @editor.getCursorBufferPosition()
+      @editor.getCursorBufferPosition()
     else
-      @point = @constructor.destroyedEditors[@URI]
+      @constructor.destroyedEditors[@URI]
 
   getInfo: ->
-    @update()
-    {@URI, @point, @editor}
+    {@editor, point: @getPoint(), @URI}
