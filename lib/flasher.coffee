@@ -1,16 +1,31 @@
 settings  = require './settings'
+{Range} = require 'atom'
 
 module.exports =
 class Flasher
   @flash: (editor, range) =>
-    marker = editor.markBufferRange range,
+    @clear()
+    editor = atom.workspace.getActiveTextEditor()
+    spec =
+    switch settings.get('flashType')
+      when 'line'
+        type: 'line'
+        range: editor.getCursor().getCurrentLineBufferRange()
+      when 'word'
+        type: 'highlight'
+        range: editor.getCursor().getCurrentWordBufferRange()
+      when 'point'
+        point = editor.getCursorBufferPosition()
+        type: 'highlight'
+        range: new Range(point, point.translate([0,1]))
+
+    marker = editor.markBufferRange spec.range,
       invalidate: 'never'
       persistent: false
 
-    color = settings.get('flashColor')
     @decoration = editor.decorateMarker marker,
-      type: 'line'
-      class: "cursor-history-#{color}"
+      type: spec.type
+      class: "cursor-history-#{settings.get('flashColor')}"
 
     @timeoutID = setTimeout  =>
       @decoration.getMarker().destroy()

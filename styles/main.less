@@ -1,20 +1,41 @@
-atom-text-editor::shadow .line {
-  &.cursor-history-info {
+atom-text-editor::shadow {
+  .line {
+    &.cursor-history-info {
+      background-color: @background-color-info;
+    }
+    &.cursor-history-success {
+      background-color: @background-color-success;
+    }
+    &.cursor-history-warning {
+      background-color: @background-color-warning;
+    }
+    &.cursor-history-error {
+      background-color: @background-color-error;
+    }
+    &.cursor-history-highlight {
+      background-color: @background-color-highlight;
+    }
+    &.cursor-history-selected {
+      background-color: @background-color-selected;
+    }
+  }
+
+  .cursor-history-info .region {
     background-color: @background-color-info;
   }
-  &.cursor-history-success {
+  .cursor-history-success .region {
     background-color: @background-color-success;
   }
-  &.cursor-history-warning {
+  .cursor-history-warning .region {
     background-color: @background-color-warning;
   }
-  &.cursor-history-error {
+  .cursor-history-error .region {
     background-color: @background-color-error;
   }
-  &.cursor-history-highlight {
+  .cursor-history-highlight .region {
     background-color: @background-color-highlight;
   }
-  &.cursor-history-selected {
+  .cursor-history-selected .region {
     background-color: @background-color-selected;
   }
 }

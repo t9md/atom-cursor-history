@@ -34,8 +34,14 @@ config =
     default: 'info'
     enum: ['info', 'success', 'warning', 'error', 'highlight', 'selected']
     description: 'flash color style, correspoinding to @background-color-#{flashColor}: see `styleguide:show`'
-  debug:
+  flashType:
     order: 7
+    type: 'string'
+    default: 'line'
+    enum: ['line', 'word', 'point']
+    description: 'Range to be flashed'
+  debug:
+    order: 10
     type: 'boolean'
     default: false
     description: "Output history on console.log"

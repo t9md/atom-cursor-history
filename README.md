@@ -6,8 +6,8 @@ Jump to next and previous cursor position by keeping track of cursor position.
 
 # Features
 
-* Flash cursor line on land(configurable, disable/enable and can customize fash color and duration).
-* Can jump to prev/next point even if Buffer have already destroyed.
+* Flash cursor line on land. Can disable or customize flash color, duration and type(line, word, point).
+* Can jump to prev/next point even if Buffer have already been destroyed.
 * Aware file renaming.
 * Vim like history concatnation(Never save same line per file. This allow you to jump specific line only once).
 * Auto adjust cursor position to middle of screen if target was off-screen.

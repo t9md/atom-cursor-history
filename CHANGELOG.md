@@ -1,3 +1,6 @@
+## 0.4.4 - Improve
+* Now configurable `FlashType` from 'line', 'word', 'point'
+
 ## 0.4.3 - Fix deubug print.
 * Flash cursor line on landing.
 * Independent setgings object and utility functions.

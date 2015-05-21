@@ -27,12 +27,8 @@ class Entry
   isDestroyed: ->
     @destroyed
 
-  # getPoint: ->
-  #   if @editor.isAlive()
-  #     @point = @marker.getStartBufferPosition()
-  #   @point
-
-  getInfo: -> {@URI, @point}
+  # getInfo: ->
+  #   {@URI, @point}
 
   inspect: ->
     "#{@point}, #{path.basename(@URI)}"

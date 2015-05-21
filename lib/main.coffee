@@ -46,14 +46,8 @@ module.exports =
 
     @subscriptions.add @onDidJumpToHistory (direction) =>
       @unLock()
-      @flashCursorLine() if settings.get('flashOnLand')
+      Flasher.flash() if settings.get('flashOnLand')
       @history.dump direction
-
-  flashCursorLine: ->
-    editor = @getActiveTextEditor()
-    range = editor.getSelectedBufferRange()
-    Flasher.clear()
-    Flasher.flash editor, range
 
   onWillJumpToHistory: (callback) ->
     @emitter.on 'will-jump-to-history', callback
@@ -126,11 +120,11 @@ module.exports =
 
     @emitter.emit 'will-jump-to-history', direction
 
-    {URI, point} = entry.getInfo()
+    {URI, point} = entry
 
     if activeEditor.getURI() is URI
       # Jump within same pane
-      
+
       # Intentionally disable `autoscroll` to set cursor position middle of
       # screen afterward.
       activeEditor.setCursorBufferPosition point, autoscroll: false
