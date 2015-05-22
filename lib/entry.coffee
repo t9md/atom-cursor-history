@@ -31,9 +31,6 @@ class Entry
   isDestroyed: ->
     @destroyed
 
-  # getInfo: ->
-  #   {@URI, @point}
-
   inspect: ->
     "#{@point}, #{path.basename(@URI)}"
 
