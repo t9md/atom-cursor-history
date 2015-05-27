@@ -1,3 +1,6 @@
+## 0.4.7 - Fix deprecated API.
+* Fix for atom/atom#6867
+
 ## 0.4.6 - Fix and Feature
 * New option `excludeClosedBuffer` false by default.
 * [Fix] `prev` should `Prev`. prev was not worked when back from head.

@@ -10,10 +10,10 @@ class Flasher
     switch settings.get('flashType')
       when 'line'
         type: 'line'
-        range: editor.getCursor().getCurrentLineBufferRange()
+        range: editor.getLastCursor().getCurrentLineBufferRange()
       when 'word'
         type: 'highlight'
-        range: editor.getCursor().getCurrentWordBufferRange()
+        range: editor.getLastCursor().getCurrentWordBufferRange()
       when 'point'
         point = editor.getCursorBufferPosition()
         type: 'highlight'
