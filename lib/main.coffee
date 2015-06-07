@@ -1,5 +1,6 @@
 {CompositeDisposable, TextEditor, Emitter} = require 'atom'
 path = require 'path'
+_    = require 'underscore-plus'
 
 History    = require './history'
 LastEditor = require './last-editor'
@@ -69,7 +70,8 @@ module.exports =
 
     {editor, point, URI: lastURI} = @lastEditor.getInfo()
     if not @isLocked() and (lastURI isnt item.getURI())
-      @history.add editor, point, lastURI
+      # @history.add editor, point, lastURI
+      @saveHistory editor, point, lastURI
       @history.dump "[Pane item changed] save history"
 
     @lastEditor.set item
@@ -81,8 +83,20 @@ module.exports =
     return unless URI = editor.getURI()
 
     if @needRemember(oldBufferPosition, newBufferPosition, cursor)
-      @history.add editor, oldBufferPosition, URI
+      # @history.add editor, oldBufferPosition, URI
+      @saveHistory editor, oldBufferPosition, URI
       @history.dump "[Cursor moved] save history"
+
+  # Throttoling save to history one per 500ms.
+  # When activePaneItem change and cursor Move happen at once.
+  # We pick activePaneItem change, and ignore cursor movement.
+  # Since activePaneItem change happen before cursor movement.
+  # Ignoring tail call mean ignoring cursor move happen just after pane change.
+  # This is mainly for saving only target position on `symbols-view:goto-declaration` and
+  # ignoring relaying position(first line of file of target position.)
+  saveHistory: (editor, point, URI)->
+    @_saveHistory ?= _.throttle(@history.add.bind(@history), 500, trailing: false)
+    @_saveHistory editor, point, URI
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     # Line number delata exceeds or not.
