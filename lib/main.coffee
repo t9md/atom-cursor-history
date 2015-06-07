@@ -30,7 +30,7 @@ module.exports =
       'cursor-history:prev':  => @prev()
       'cursor-history:clear': => @clear()
       'cursor-history:dump':  => @dump()
-      'cursor-history:toggle-debug': => @toggleDebug()
+      'cursor-history:toggle-debug': => @toggleConfig('debug')
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @handleChangePath(editor)
@@ -152,7 +152,5 @@ module.exports =
   dump: ->
     @history.dump '', true
 
-  toggleDebug: ->
-    settings.toggle('debug')
-    state = settings.get('debug') and "enabled" or "disabled"
-    console.log "cursor-history: debug #{state}"
+  toggleConfig: (param) ->
+    settings.toggle(param, true)
