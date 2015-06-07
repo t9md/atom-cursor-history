@@ -59,8 +59,11 @@ settings =
   get: (param) ->
     atom.config.get("#{@scope}.#{param}")
 
+  set: (param, value) ->
+    atom.config.set("#{@scope}.#{param}", value)
+
   toggle: (param) ->
-    atom.config.toggle("#{@scope}.#{param}")
+    @set(param, !@get(param))
 
   onDidChange: (param, callback) ->
     @disposables.add atom.config.onDidChange "#{@scope}.#{param}", callback
