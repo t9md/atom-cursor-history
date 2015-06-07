@@ -1,3 +1,6 @@
+## 0.4.8 - Improve
+* Use `atom-config-plus`.
+
 ## 0.4.7 - Fix deprecated API.
 * Fix for atom/atom#6867
 

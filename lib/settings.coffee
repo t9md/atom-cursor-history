@@ -1,4 +1,4 @@
-{CompositeDisposable} = require 'atom'
+ConfigPlus = require 'atom-config-plus'
 
 config =
   max:
@@ -51,30 +51,4 @@ config =
     default: false
     description: "Output history on console.log"
 
-scope = 'cursor-history'
-
-settings =
-  scope: scope
-  config: config
-  disposables: new CompositeDisposable
-
-  get: (param) ->
-    atom.config.get("#{@scope}.#{param}")
-
-  set: (param, value) ->
-    atom.config.set("#{@scope}.#{param}", value)
-
-  toggle: (param, log=false) ->
-    @set param, !@get(param)
-    @log param if log
-
-  log: (param) ->
-    console.log "#{@scope}.#{param}: #{@get(param)}"
-
-  onDidChange: (param, callback) ->
-    @disposables.add atom.config.onDidChange "#{@scope}.#{param}", callback
-
-  dispose: ->
-    @disposables.dispose()
-
-module.exports = settings
+module.exports = new ConfigPlus('cursor-history', config)
