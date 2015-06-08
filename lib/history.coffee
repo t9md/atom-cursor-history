@@ -1,5 +1,5 @@
-_     = require 'underscore-plus'
-Entry = require './entry'
+_        = require 'underscore-plus'
+Entry    = require './entry'
 settings = require './settings'
 
 debug = (msg) ->
@@ -8,30 +8,59 @@ debug = (msg) ->
 
 module.exports =
 class History
-  constructor: (max) ->
-    @initialize max
+  entries: []
+  index: 0
 
-  initialize: (max) ->
+  constructor: (@max) ->
+    @reset()
+
+  reset: ->
     @index   = 0
     @entries = []
-    @max     = max
 
   clear: ->
-    for entry in @entries
-      entry.destroy()
-    @initialize @max
+    entry.destroy() for entry in @entries
+    @reset()
 
-  isOldest: -> @isEmpty() or @index is 0
-  isNewest: -> @isEmpty() or @index >= @entries.length - 1
-  isEmpty:  -> @entries.length is 0
+  destroy:   -> @clear()
+  serialize: ->
+
+  isOldest: ->
+    @isEmpty() or @index is 0
+
+  isNewest: ->
+    @isEmpty() or @index >= (@entries.length - 1)
+
+  isEmpty:  ->
+    @entries.length is 0
+
+  rename: (oldURI, newURI) ->
+    for entry in @entries when entry.URI is oldURI
+      entry.URI = newURI
 
   get: (index) -> @entries[index]
   getCurrent:  -> @get @index
-  # getURI: (index) -> @get(index)?.getProperties().URI
 
-  destroy: -> @clear()
+  getNext: ->
+    if @isNewest()
+      @dump "Newest"
+      return
+    @getValid 'Next'
 
-  serialize: () ->
+  getPrev: ->
+    if @isOldest()
+      @dump "Oldest"
+      return
+    @getValid 'Prev'
+
+  removeCurrent: -> @remove @index
+
+  remove: (index, count=1) ->
+    entries = @entries.splice(index, count)
+    for entry in entries
+      debug "  Destroy: #{entry.inspect()}"
+      entry.destroy()
+    entries
 
   getValid: (direction) ->
     until @isEmpty()
@@ -51,31 +80,8 @@ class History
       @removeCurrent()
       if direction is 'Next'
         @index -= 1
+    return null
 
-  getNext: ->
-    if @isNewest()
-      @dump "Newest"
-      return
-    @getValid 'Next'
-
-  getPrev: ->
-    if @isOldest()
-      @dump "Oldest"
-      return
-    @getValid 'Prev'
-
-  removeCurrent: -> @remove(@index)?[0]
-
-  rename: (oldURI, newURI) ->
-    for entry in @entries when entry.URI is oldURI
-      entry.URI = newURI
-
-  remove: (index, count=1) ->
-    entries = @entries.splice(index, count)
-    for entry in entries
-      debug "  Destroy: #{entry.inspect()}"
-      entry.destroy()
-    entries
 
   # rename: (oldURI, , point, URI) ->
   #   @add editor, point, URI, false
@@ -131,7 +137,7 @@ class History
   #    newMarker(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: (editor, point, URI, pointIndexToHead=true) ->
+  add: (editor, point, URI, options={}) ->
     newEntry = new Entry(editor, point, URI)
 
     for entry, i in @entries
@@ -146,11 +152,14 @@ class History
     if @entries.length > @max
       @remove 0, (@entries.length - @max)
 
-    if pointIndexToHead
+    unless (options.pointIndexToHead is false)
       @index = @entries.length
 
+    if options.dumpMessage
+      @dump options.dumpMessage
+
   pushToHead: (editor, point, URI) ->
-    @add editor, point, URI, false
+    @add editor, point, URI, pointIndexToHead: false
 
   dump: (msg, force=false) ->
     unless force or settings.get('debug')

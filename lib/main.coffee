@@ -71,8 +71,8 @@ module.exports =
     {editor, point, URI: lastURI} = @lastEditor.getInfo()
     if not @isLocked() and (lastURI isnt item.getURI())
       # @history.add editor, point, lastURI
-      @saveHistory editor, point, lastURI
-      @history.dump "[Pane item changed] save history"
+      @saveHistory editor, point, lastURI, dumpMessage: "[Pane item changed] save history"
+      # @history.dump "[Pane item changed] save history"
 
     @lastEditor.set item
     @debug "set LastEditor #{path.basename(item.getURI())}"
@@ -84,19 +84,19 @@ module.exports =
 
     if @needRemember(oldBufferPosition, newBufferPosition, cursor)
       # @history.add editor, oldBufferPosition, URI
-      @saveHistory editor, oldBufferPosition, URI
-      @history.dump "[Cursor moved] save history"
+      @saveHistory editor, oldBufferPosition, URI, dumpMessage: "[Cursor moved] save history"
+      # @history.dump "[Cursor moved] save history"
 
-  # Throttoling save to history one per 500ms.
-  # When activePaneItem change and cursor Move happen at once.
+  # Throttoling save to history once per 500ms.
+  # When activePaneItem change and cursorMove event happened almost at once.
   # We pick activePaneItem change, and ignore cursor movement.
   # Since activePaneItem change happen before cursor movement.
   # Ignoring tail call mean ignoring cursor move happen just after pane change.
   # This is mainly for saving only target position on `symbols-view:goto-declaration` and
   # ignoring relaying position(first line of file of target position.)
-  saveHistory: (editor, point, URI)->
+  saveHistory: (editor, point, URI, options)->
     @_saveHistory ?= _.throttle(@history.add.bind(@history), 500, trailing: false)
-    @_saveHistory editor, point, URI
+    @_saveHistory editor, point, URI, options
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     # Line number delata exceeds or not.
@@ -126,7 +126,7 @@ module.exports =
     {URI, point} = entry
 
     if activeEditor.getURI() is URI
-      # Jump within same pane
+      # Jump within same paneItem
 
       # Intentionally disable `autoscroll` to set cursor position middle of
       # screen afterward.
@@ -138,11 +138,14 @@ module.exports =
     else
       # Jump to different pane
       options =
-        initialLine: point.row
-        initialColumn: point.column
         searchAllPanes: settings.get('searchAllPanes')
+        
+        # initialLine: point.row
+        # initialColumn: point.column
 
       atom.workspace.open(URI, options).done (editor) =>
+        editor.scrollToBufferPosition(point, center: true)
+        editor.setCursorBufferPosition(point)
         @emitter.emit 'did-jump-to-history', direction
 
     @history.dump direction

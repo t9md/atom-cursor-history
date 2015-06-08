@@ -1,14 +1,14 @@
-fs   = require 'fs'
-path = require 'path'
+fs       = require 'fs'
 settings = require './settings'
+path     = null
 
 # Wrapper class to wrap Point or Marker.
 # We can't call `editor::markBufferPosition` on destroyed editor.
 # So We need to use Point instead of Marker for destroyed editor.
 module.exports =
 class Entry
-  destroyed: false
-  marker: null
+  destroyed:  false
+  marker:     null
   disposable: null
 
   constructor: (@editor, @point, @URI) ->
@@ -32,7 +32,9 @@ class Entry
     @destroyed
 
   inspect: ->
+    path ?= require 'path'
     "#{@point}, #{path.basename(@URI)}"
 
-  isSameRow: ({URI, point}) ->
+  isSameRow: (otherEntry) ->
+    {URI, point} = otherEntry
     (URI is @URI) and (point.row is @point.row)

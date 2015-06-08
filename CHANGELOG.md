@@ -1,7 +1,7 @@
 ## 0.4.8 - Improve
 * Use `atom-config-plus`.
-* Observer `onDidOpen` rather than `ActivePaneItem`, this will well fit
- to `symbols-view:go-to-declaration`
+* throttle saving to well fit to `symbols-view:go-to-declaration`
+* Scrooll to center on target is not current paneItem.
 
 ## 0.4.7 - Fix deprecated API.
 * Fix for atom/atom#6867
