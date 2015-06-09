@@ -70,9 +70,7 @@ module.exports =
 
     {editor, point, URI: lastURI} = @lastEditor.getInfo()
     if not @isLocked() and (lastURI isnt item.getURI())
-      # @history.add editor, point, lastURI
       @saveHistory editor, point, lastURI, dumpMessage: "[Pane item changed] save history"
-      # @history.dump "[Pane item changed] save history"
 
     @lastEditor.set item
     @debug "set LastEditor #{path.basename(item.getURI())}"
@@ -83,9 +81,7 @@ module.exports =
     return unless URI = editor.getURI()
 
     if @needRemember(oldBufferPosition, newBufferPosition, cursor)
-      # @history.add editor, oldBufferPosition, URI
       @saveHistory editor, oldBufferPosition, URI, dumpMessage: "[Cursor moved] save history"
-      # @history.dump "[Cursor moved] save history"
 
   # Throttoling save to history once per 500ms.
   # When activePaneItem change and cursorMove event happened almost at once.
@@ -139,7 +135,7 @@ module.exports =
       # Jump to different pane
       options =
         searchAllPanes: settings.get('searchAllPanes')
-        
+
         # initialLine: point.row
         # initialColumn: point.column
 
