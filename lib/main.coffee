@@ -171,7 +171,7 @@ module.exports =
 
   deactivate: ->
     @subscriptions.dispose()
-    for key, disposables @editorSubscriptions
+    for key, disposables in @editorSubscriptions
       disposables.dispose()
     @editorSubscriptions = null
     settings.dispose()
