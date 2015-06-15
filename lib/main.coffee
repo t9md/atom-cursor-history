@@ -49,7 +49,7 @@ module.exports =
 
       @editorSubscriptions[editor.id].add editor.onDidDestroy =>
         @editorSubscriptions[editor.id].dispose()
-      #   delete @editorSubscriptions[editor.id]
+        delete @editorSubscriptions[editor.id]
 
     @subscriptions.add atom.workspace.observeActivePaneItem (item) =>
       if item instanceof TextEditor and item.getURI()
