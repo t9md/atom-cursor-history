@@ -47,8 +47,8 @@ module.exports =
         return if @isLocked()
         @handleCursorMoved event
 
-      # @editorSubscriptions[editor.id].add editor.onDidDestroy =>
-      #   @editorSubscriptions[editor.id].dispose()
+      @editorSubscriptions[editor.id].add editor.onDidDestroy =>
+        @editorSubscriptions[editor.id].dispose()
       #   delete @editorSubscriptions[editor.id]
 
     @subscriptions.add atom.workspace.observeActivePaneItem (item) =>
