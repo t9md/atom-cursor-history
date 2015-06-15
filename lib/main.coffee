@@ -11,14 +11,19 @@ module.exports =
   config: settings.config
   history: null
   subscriptions: null
+  editorSubscriptions: null
   lastEditor: null
   locked: false
 
-  onWillJumpToHistory: (callback) -> @emitter.on 'will-jump-to-history', callback
-  onDidJumpToHistory:  (callback) -> @emitter.on 'did-jump-to-history', callback
+  onWillJumpToHistory: (callback) ->
+    @emitter.on 'will-jump-to-history', callback
+
+  onDidJumpToHistory:  (callback) ->
+    @emitter.on 'did-jump-to-history', callback
 
   activate: (state) ->
     @subscriptions = new CompositeDisposable
+    @editorSubscriptions = {}
     @emitter       = new Emitter
     @history       = new History settings.get('max')
 
@@ -32,12 +37,19 @@ module.exports =
       'cursor-history:clear': => @clear()
       'cursor-history:dump':  => @dump()
       'cursor-history:toggle-debug': => @toggleConfig('debug')
+      'cursor-history:check-leak': => @checkLeak()
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
+      @editorSubscriptions[editor.id] = new CompositeDisposable
       @handleChangePath(editor)
-      @subscriptions.add editor.onDidChangeCursorPosition (event) =>
+
+      @editorSubscriptions[editor.id].add editor.onDidChangeCursorPosition (event) =>
         return if @isLocked()
         @handleCursorMoved event
+
+      # @editorSubscriptions[editor.id].add editor.onDidDestroy =>
+      #   @editorSubscriptions[editor.id].dispose()
+      #   delete @editorSubscriptions[editor.id]
 
     @subscriptions.add atom.workspace.observeActivePaneItem (item) =>
       if item instanceof TextEditor and item.getURI()
@@ -55,10 +67,21 @@ module.exports =
       Flasher.flash() if settings.get('flashOnLand')
       @history.dump direction
 
+  checkLeak: ->
+    subTotal       = @subscriptions.disposables.size
+    editorSubTotal = _.chain(@editorSubscriptions)
+      .values()
+      .map((e) -> e.disposables?.size)
+      .filter( (e) -> e?)
+      .reduce(((sum, n) -> sum + n), 0)
+      .value()
+    console.log "subTotal: #{subTotal}"
+    console.log "editorSubTotal: #{editorSubTotal}"
+
   handleChangePath: (editor) ->
     orgURI = editor.getURI()
 
-    @subscriptions.add editor.onDidChangePath =>
+    @editorSubscriptions[editor.id].add editor.onDidChangePath =>
       newURI = editor.getURI()
       @history.rename orgURI, newURI
       @lastEditor.rename orgURI, newURI
@@ -148,6 +171,9 @@ module.exports =
 
   deactivate: ->
     @subscriptions.dispose()
+    for key, disposables @editorSubscriptions
+      disposables.dispose()
+    @editorSubscriptions = null
     settings.dispose()
     @history?.destroy()
     @history = null
