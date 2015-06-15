@@ -37,7 +37,6 @@ module.exports =
       'cursor-history:clear': => @clear()
       'cursor-history:dump':  => @dump()
       'cursor-history:toggle-debug': => @toggleConfig('debug')
-      'cursor-history:check-leak': => @checkLeak()
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @editorSubscriptions[editor.id] = new CompositeDisposable
@@ -66,17 +65,6 @@ module.exports =
       @unLock()
       Flasher.flash() if settings.get('flashOnLand')
       @history.dump direction
-
-  checkLeak: ->
-    subTotal       = @subscriptions.disposables.size
-    editorSubTotal = _.chain(@editorSubscriptions)
-      .values()
-      .map((e) -> e.disposables?.size)
-      .filter( (e) -> e?)
-      .reduce(((sum, n) -> sum + n), 0)
-      .value()
-    console.log "subTotal: #{subTotal}"
-    console.log "editorSubTotal: #{editorSubTotal}"
 
   handleChangePath: (editor) ->
     orgURI = editor.getURI()
