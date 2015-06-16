@@ -1,3 +1,7 @@
+## 0.4.10 - Improve
+* Fix #4 subscription leak each time editor destroyed
+* Delete unused keymap
+
 ## 0.4.8 - Improve
 * Use `atom-config-plus`.
 * throttle saving to well fit to `symbols-view:go-to-declaration`
