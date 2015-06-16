@@ -32,10 +32,10 @@ module.exports =
       @rowDeltaToRemember = newValue
 
     atom.commands.add 'atom-workspace',
-      'cursor-history:next':  => @next()
-      'cursor-history:prev':  => @prev()
-      'cursor-history:clear': => @clear()
-      'cursor-history:dump':  => @dump()
+      'cursor-history:next':         => @next()
+      'cursor-history:prev':         => @prev()
+      'cursor-history:clear':        => @clear()
+      'cursor-history:dump':         => @dump()
       'cursor-history:toggle-debug': => @toggleConfig('debug')
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
@@ -147,9 +147,6 @@ module.exports =
       options =
         searchAllPanes: settings.get('searchAllPanes')
 
-        # initialLine: point.row
-        # initialColumn: point.column
-
       atom.workspace.open(URI, options).done (editor) =>
         editor.scrollToBufferPosition(point, center: true)
         editor.setCursorBufferPosition(point)
@@ -158,10 +155,10 @@ module.exports =
     @history.dump direction
 
   deactivate: ->
-    @subscriptions.dispose()
-    for key, disposables in @editorSubscriptions
+    for editorID, disposables of @editorSubscriptions
       disposables.dispose()
     @editorSubscriptions = null
+    @subscriptions.dispose()
     settings.dispose()
     @history?.destroy()
     @history = null
