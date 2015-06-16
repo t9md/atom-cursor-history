@@ -1,3 +1,6 @@
+## 0.4.11 - Improve
+* Fix disposable() on TextEditor::destroy()
+
 ## 0.4.10 - Improve
 * Fix #4 subscription leak each time editor destroyed
 * Delete unused keymap
