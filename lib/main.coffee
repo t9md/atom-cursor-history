@@ -63,7 +63,7 @@ module.exports =
                 newPoint = editor.getCursorBufferPosition()
                 console.log "move from #{point.toString()} -> #{newPoint.toString()}"
                 if @needRemember(point, newPoint, null)
-                  @saveHistory editor, point, editor.getURI(), dumpMessage: "[Cursor moved] save history"
+                  @history.add editor, point, editor.getURI(), dumpMessage: "[Cursor moved] save history"
                 @unLock()
                 console.log "hidden #{itemKind}"
               , 300
@@ -116,7 +116,7 @@ module.exports =
 
     {editor, point, URI: lastURI} = @lastEditor.getInfo()
     if not @isLocked() and (lastURI isnt item.getURI())
-      @saveHistory editor, point, lastURI, dumpMessage: "[Pane item changed] save history"
+      @history.add editor, point, lastURI, dumpMessage: "[Pane item changed] save history"
 
     @lastEditor.set item
     @debug "set LastEditor #{path.basename(item.getURI())}"
@@ -128,7 +128,7 @@ module.exports =
     return unless URI = editor.getURI()
 
     if @needRemember(oldBufferPosition, newBufferPosition, cursor)
-      @saveHistory editor, oldBufferPosition, URI, dumpMessage: "[Cursor moved] save history"
+      @history.add editor, oldBufferPosition, URI, dumpMessage: "[Cursor moved] save history"
 
   # Throttoling save to history once per 500ms.
   # When activePaneItem change and cursorMove event happened almost at once.
@@ -137,9 +137,9 @@ module.exports =
   # Ignoring tail call mean ignoring cursor move happen just after pane change.
   # This is mainly for saving only target position on `symbols-view:goto-declaration` and
   # ignoring relaying position(first line of file of target position.)
-  saveHistory: (editor, point, URI, options)->
-    @_saveHistory ?= _.throttle(@history.add.bind(@history), 500, trailing: false)
-    @_saveHistory editor, point, URI, options
+  # saveHistory: (editor, point, URI, options)->
+  #   @_saveHistory ?= _.throttle(@history.add.bind(@history), 500, trailing: false)
+  #   @_saveHistory editor, point, URI, options
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     # Line number delata exceeds or not.
