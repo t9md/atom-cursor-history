@@ -15,6 +15,11 @@ module.exports =
   lastEditor: null
   locked: false
 
+  # Experiment
+  symbolsViewFileView: null
+  symbolsViewProjectView: null
+  modalPanelContainer: null
+
   onWillJumpToHistory: (callback) ->
     @emitter.on 'will-jump-to-history', callback
 
@@ -38,13 +43,43 @@ module.exports =
       'cursor-history:dump':         => @dump()
       'cursor-history:toggle-debug': => @toggleConfig('debug')
 
+    @modalPanelContainer = atom.workspace.panelContainers['modal']
+    @subscriptions.add @modalPanelContainer.onDidAddPanel ({panel, index}) =>
+      # itemKind in ['GoToView', 'GoBackView', 'FileView', 'ProjectView']
+      itemKind = panel.getItem().constructor.name
+      return unless itemKind in ['FileView', 'ProjectView']
+      switch itemKind
+        when 'FileView'
+          [editor, point] = []
+          @symbolsViewFileView = {panel, item: panel.getItem()}
+          panel.onDidChangeVisible (visible) =>
+            editor = @getActiveTextEditor()
+            if visible
+              point = editor.getCursorBufferPosition()
+              @lock()
+              console.log "shown #{itemKind}"
+            else
+              setTimeout =>
+                newPoint = editor.getCursorBufferPosition()
+                console.log "move from #{point.toString()} -> #{newPoint.toString()}"
+                if @needRemember(point, newPoint, null)
+                  @saveHistory editor, point, editor.getURI(), dumpMessage: "[Cursor moved] save history"
+                @unLock()
+                console.log "hidden #{itemKind}"
+              , 300
+        when 'ProjectView'
+          @symbolsViewProjectView = {panel, item: panel.getItem()}
+
+
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
       @editorSubscriptions[editor.id] = new CompositeDisposable
       @handleChangePath(editor)
 
       @editorSubscriptions[editor.id].add editor.onDidChangeCursorPosition (event) =>
         return if @isLocked()
-        @handleCursorMoved event
+        setTimeout =>
+          @handleCursorMoved event
+        , 300
 
       @editorSubscriptions[editor.id].add editor.onDidDestroy =>
         @editorSubscriptions[editor.id]?.dispose()
@@ -87,6 +122,7 @@ module.exports =
     @debug "set LastEditor #{path.basename(item.getURI())}"
 
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
+    return if @symbolsViewFileView?.panel.isVisible()
     editor = cursor.editor
     return if editor.hasMultipleCursors()
     return unless URI = editor.getURI()
@@ -107,7 +143,10 @@ module.exports =
 
   needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
     # Line number delata exceeds or not.
-    Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
+    if Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
+      console.log "needRemember: old = #{oldBufferPosition.toString()}, new = #{newBufferPosition.toString()}"
+      return true
+
 
   lock:     -> @locked = true
   unLock:   -> @locked = false
@@ -152,7 +191,7 @@ module.exports =
         editor.setCursorBufferPosition(point)
         @emitter.emit 'did-jump-to-history', direction
 
-    @history.dump direction
+    # @history.dump direction
 
   deactivate: ->
     for editorID, disposables of @editorSubscriptions
@@ -174,6 +213,7 @@ module.exports =
     atom.workspace.getActiveTextEditor()
 
   dump: ->
+    console.log @modalPanelContainer
     @history.dump '', true
 
   toggleConfig: (param) ->
