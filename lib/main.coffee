@@ -1,4 +1,4 @@
-{CompositeDisposable, TextEditor, Emitter} = require 'atom'
+{CompositeDisposable, Disposable, TextEditor, Emitter} = require 'atom'
 path = require 'path'
 _    = require 'underscore-plus'
 
@@ -44,31 +44,16 @@ module.exports =
       'cursor-history:toggle-debug': => @toggleConfig('debug')
 
     @modalPanelContainer = atom.workspace.panelContainers['modal']
+
     @subscriptions.add @modalPanelContainer.onDidAddPanel ({panel, index}) =>
       # itemKind in ['GoToView', 'GoBackView', 'FileView', 'ProjectView']
       itemKind = panel.getItem().constructor.name
       return unless itemKind in ['FileView', 'ProjectView']
       switch itemKind
         when 'FileView'
-          [editor, point] = []
-          @symbolsViewFileView = {panel, item: panel.getItem()}
-          panel.onDidChangeVisible (visible) =>
-            editor = @getActiveTextEditor()
-            if visible
-              point = editor.getCursorBufferPosition()
-              @lock()
-              console.log "shown #{itemKind}"
-            else
-              setTimeout =>
-                newPoint = editor.getCursorBufferPosition()
-                console.log "move from #{point.toString()} -> #{newPoint.toString()}"
-                if @needRemember(point, newPoint, null)
-                  @history.add editor, point, editor.getURI(), dumpMessage: "[Cursor moved] save history"
-                @unLock()
-                console.log "hidden #{itemKind}"
-              , 300
+          @handleSymbolsViewFileView panel
         when 'ProjectView'
-          @symbolsViewProjectView = {panel, item: panel.getItem()}
+          @handleSymbolsViewProjectView panel
 
 
     @subscriptions.add atom.workspace.observeTextEditors (editor) =>
@@ -77,6 +62,7 @@ module.exports =
 
       @editorSubscriptions[editor.id].add editor.onDidChangeCursorPosition (event) =>
         return if @isLocked()
+        return if event.oldBufferPosition.row is event.newBufferPosition.row # for performance.
         setTimeout =>
           @handleCursorMoved event
         , 300
@@ -101,6 +87,29 @@ module.exports =
       Flasher.flash() if settings.get('flashOnLand')
       @history.dump direction
 
+    # @extendSymbolsView()
+
+  extendSymbolsView: ->
+    return unless pack = atom.packages.getLoadedPackage('symbols-view')
+
+    libPath = path.join(atom.packages.resolvePackagePath('symbols-view') , 'lib', 'symbols-view')
+    SymbolsView = require libPath
+    _openTag = SymbolsView::openTag
+    SymbolsView::openTag = (params...) ->
+      # if @constructor
+      # setTimeout =>
+      #   console.log "before", @panel.isVisible()
+      # , 300
+      console.log "Before"
+      console.log @stack
+      console.log @constructor.name
+      _openTag.call(this, params...)
+      console.log "After"
+      console.log @stack
+      # setTimeout =>
+      #   console.log "after", @panel.isVisible()
+      # , 300
+
   handleChangePath: (editor) ->
     orgURI = editor.getURI()
 
@@ -122,13 +131,93 @@ module.exports =
     @debug "set LastEditor #{path.basename(item.getURI())}"
 
   handleCursorMoved: ({oldBufferPosition, newBufferPosition, cursor}) ->
-    return if @symbolsViewFileView?.panel.isVisible()
+    if @symbolsViewFileView?.panel.isVisible()
+      console.log "Symbol View visible returning"
+      return
+    return if @isLocked()
+    console.log "Moved!!"
     editor = cursor.editor
     return if editor.hasMultipleCursors()
     return unless URI = editor.getURI()
+    # console.log
 
-    if @needRemember(oldBufferPosition, newBufferPosition, cursor)
+    if @needRemember(oldBufferPosition, newBufferPosition)
       @history.add editor, oldBufferPosition, URI, dumpMessage: "[Cursor moved] save history"
+
+  withPanel: (panel, {onShow, onHide}) ->
+    [oldEditor, oldPoint, newEditor, newPoint] = []
+    panelSubscription = panel.onDidChangeVisible (visible) =>
+      if visible
+        @lock()
+        {editor: oldEditor, point: oldPoint} = onShow()
+      else
+        {editor: newEditor, point: newPoint} = onHide()
+        if @needRemember(oldPoint, newPoint)
+          @history.add oldEditor, oldPoint, oldEditor.getURI(), dumpMessage: "[Cursor moved] save history"
+        @unLock()
+
+    @subscriptions.add panel.onDidDestroy ->
+      panelSubscription.dispose()
+
+  handleSymbolsViewFileView: (panel) ->
+    @symbolsViewFileView ?= {panel, item: panel.getItem()}
+    @withPanel panel,
+      onShow: =>
+        editor = @getActiveTextEditor()
+        # At the timing symbol-views panel show, first item in symobls
+        # already selected(this mean cursor position have changed).
+        # So we can't use TexitEditor::getCursorBufferPosition(), fotunately,
+        # symbols-view serialize buffer state initaially, we use this.
+        point = panel.getItem().initialState?.bufferRanges[0].start
+        {editor, point}
+      onHide: =>
+        editor = @getActiveTextEditor()
+        point = editor.getCursorBufferPosition()
+        {editor, point}
+        # console.log "move from #{point.toString()} -> #{newPoint.toString()}"
+
+    # [editor, point] = []
+    # @symbolsViewFileView = {panel, item: panel.getItem()}
+    # panelSubscription = panel.onDidChangeVisible (visible) =>
+    #   if visible
+    #     @lock()
+    #     editor = @getActiveTextEditor()
+    #     # At the timing symbol-views panel show, first item in symobls
+    #     # already selected(this mean cursor position have changed).
+    #     # So we can't use TexitEditor::getCursorBufferPosition(), fotunately,
+    #     # symbols-view serialize buffer state initaially, we use this.
+    #     point = panel.getItem().initialState?.bufferRanges[0].start
+    #   else
+    #     newPoint = editor.getCursorBufferPosition()
+    #     # console.log "move from #{point.toString()} -> #{newPoint.toString()}"
+    #     if @needRemember(point, newPoint)
+    #       @history.add editor, point, editor.getURI(), dumpMessage: "[Cursor moved] save history"
+    #     @unLock()
+    #
+    # @subscriptions.add panel.onDidDestroy ->
+    #   panelSubscription.dispose()
+
+  handleSymbolsViewProjectView: (panel) ->
+    [editor, point] = []
+    @symbolsViewProjectView = {panel, item: panel.getItem()}
+
+    panelSubscription = panel.onDidChangeVisible (visible) =>
+      if visible
+        @lock()
+        editor = @getActiveTextEditor()
+        point = editor.getCursorBufferPosition()
+      else
+        setTimeout =>
+          newPoint = @getActiveTextEditor().getCursorBufferPosition()
+          console.log "move from #{point.toString()} -> #{newPoint.toString()}"
+          if @needRemember(point, newPoint)
+            @history.add editor, point, editor.getURI(), dumpMessage: "[Cursor moved] save history"
+          @unLock()
+        , 300
+
+    @subscriptions.add panel.onDidDestroy ->
+      panelSubscription.dispose()
+
 
   # Throttoling save to history once per 500ms.
   # When activePaneItem change and cursorMove event happened almost at once.
@@ -141,12 +230,14 @@ module.exports =
   #   @_saveHistory ?= _.throttle(@history.add.bind(@history), 500, trailing: false)
   #   @_saveHistory editor, point, URI, options
 
-  needRemember: (oldBufferPosition, newBufferPosition, cursor) ->
-    # Line number delata exceeds or not.
-    if Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
-      console.log "needRemember: old = #{oldBufferPosition.toString()}, new = #{newBufferPosition.toString()}"
-      return true
+  # saveHistory: (editor, point, URI, options)->
+  #   @_saveHistory ?= _.throttle(@history.add.bind(@history), 500, trailing: false)
+  #   @_saveHistory editor, point, URI, options
 
+  needRemember: (oldBufferPosition, newBufferPosition) ->
+    # console.log "Called NeedRemember"
+    # Line number delata exceeds or not.
+    Math.abs(oldBufferPosition.row - newBufferPosition.row) > @rowDeltaToRemember
 
   lock:     -> @locked = true
   unLock:   -> @locked = false
