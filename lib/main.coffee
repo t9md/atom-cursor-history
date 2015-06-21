@@ -81,10 +81,11 @@ module.exports =
 
   observeModalPanel: ->
     atom.workspace.panelContainers['modal'].onDidAddPanel ({panel, index}) =>
-      # [CAUTION] Simply checking constructor name is not enough
-      # e.g. ProjectView is also used in `fuzzy-finder`.
       item = panel.getItem()
       name = item.constructor.name
+
+      # [CAUTION] Simply checking constructor name is not enough
+      # e.g. ProjectView is also used in `fuzzy-finder`.
       return unless (name in ['FileView', 'ProjectView']) and
         typeof(item.openTag) is 'function'
 
