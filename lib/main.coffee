@@ -54,7 +54,7 @@ module.exports =
         # At the timing symbol-views panel show, first item in symobls
         # already selected(this mean cursor position have changed).
         # So we can't use TexitEditor::getCursorBufferPosition(), fotunately,
-        # symbols-view serialize buffer state initaially, we use this.
+        # FileView serialize buffer state initaially, we use this.
         onShow: =>
           console.log "Shown FileView"
           editor = @getEditor()
@@ -85,19 +85,10 @@ module.exports =
       # e.g. ProjectView is also used in `fuzzy-finder`.
       item = panel.getItem()
       name = item.constructor.name
-      return unless name in ['FileView', 'ProjectView']
+      return unless (name in ['FileView', 'ProjectView']) and
+        typeof(item.openTag) is 'function'
 
-      if name is 'FileView'
-        @symbolsViewHandlers[name]?.bind(this)(panel)
-      else
-        # [BUG]
-        # Since symbols-view class is not exist just after panel added.
-        # We need delay checking classList.
-        setTimeout =>
-          return unless item.element.classList.contains('symbols-view')
-          # return unless name in ['GoToView', 'GoBackView', 'FileView', 'ProjectView']
-          @symbolsViewHandlers[name]?.bind(this)(panel)
-        , 300
+      @symbolsViewHandlers[name]?.bind(this)(panel)
 
   observeTextEditors: ->
     handleChangePath = (editor) =>
