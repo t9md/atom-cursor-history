@@ -13,6 +13,7 @@ module.exports =
   editorSubscriptions: null
   lastEditor: null
   locked: false
+  _locker: null
 
   activate: ->
     History = require './history'
@@ -55,10 +56,12 @@ module.exports =
         # So we can't use TexitEditor::getCursorBufferPosition(), fotunately,
         # symbols-view serialize buffer state initaially, we use this.
         onShow: =>
+          console.log "Shown FileView"
           editor = @getEditor()
           point  = panel.getItem().initialState?.bufferRanges[0].start
           {editor, point}
         onHide: =>
+          console.log "Hidden FileView"
           editor = @getEditor()
           point  = editor.getCursorBufferPosition()
           {editor, point}
@@ -66,34 +69,35 @@ module.exports =
     ProjectView: (panel) ->
       @withPanel panel,
         onShow: =>
+          console.log "Shown ProjectView"
           editor = @getEditor()
           point  = editor.getCursorBufferPosition()
           {editor, point}
         onHide: =>
+          console.log "Hidden ProjectView"
           editor = @getEditor()
           point  = editor.getCursorBufferPosition()
           {editor, point}
 
-    GoBackView: (panel) ->
-      panel.onDidChangeVisible (visible) =>
-        if visible
-          console.log "GoBackView shown"
-        else
-          console.log "GoBackView hidden"
-
-    GoToView: (panel) ->
-      panel.onDidChangeVisible (visible) =>
-        if visible
-          console.log "GoToView shown"
-        else
-          console.log "GoToView hidden"
-
   observeModalPanel: ->
     atom.workspace.panelContainers['modal'].onDidAddPanel ({panel, index}) =>
-      itemKind = panel.getItem().constructor.name
-      # return unless itemKind in ['FileView', 'ProjectView']
-      return unless itemKind in ['GoToView', 'GoBackView', 'FileView', 'ProjectView']
-      @symbolsViewHandlers[itemKind]?.bind(this)(panel)
+      # [CAUTION] Simply checking constructor name is not enough
+      # e.g. ProjectView is also used in `fuzzy-finder`.
+      item = panel.getItem()
+      name = item.constructor.name
+      return unless name in ['FileView', 'ProjectView']
+
+      if name is 'FileView'
+        @symbolsViewHandlers[name]?.bind(this)(panel)
+      else
+        # [BUG]
+        # Since symbols-view class is not exist just after panel added.
+        # We need delay checking classList.
+        setTimeout =>
+          return unless item.element.classList.contains('symbols-view')
+          # return unless name in ['GoToView', 'GoBackView', 'FileView', 'ProjectView']
+          @symbolsViewHandlers[name]?.bind(this)(panel)
+        , 300
 
   observeTextEditors: ->
     handleChangePath = (editor) =>
@@ -139,6 +143,7 @@ module.exports =
       {editor, point, URI: lastURI} = @lastEditor.getInfo()
       if not @isLocked() and (lastURI isnt item.getURI())
         @history.add editor, point, lastURI, dumpMessage: "[Pane item changed] save history"
+      console.log "lock?: #{@isLocked()}: #{@_locker}"
 
       @lastEditor.set item
       @debug "set LastEditor #{path.basename(item.getURI())}"
@@ -163,7 +168,7 @@ module.exports =
     [oldEditor, oldPoint, newEditor, newPoint] = []
     panelSubscription = panel.onDidChangeVisible (visible) =>
       if visible
-        @lock()
+        @lock panel.getItem().constructor.name
         {editor: oldEditor, point: oldPoint} = onShow()
       else
         # ProjectView delayed changing cursor position after panel hidden(),
@@ -179,7 +184,10 @@ module.exports =
     @subscriptions.add panel.onDidDestroy ->
       panelSubscription.dispose()
 
-  lock:     -> @locked = true
+  lock: (locker) ->
+    @_locker = locker
+    @locked = true
+
   unLock:   -> @locked = false
   isLocked: -> @locked
 
@@ -193,7 +201,7 @@ module.exports =
       URI   = activeEditor.getURI()
       @history.pushToHead activeEditor, point, URI
 
-    @lock()
+    @lock "Jump#{direction}"
 
     {URI, point} = entry
 
@@ -224,6 +232,7 @@ module.exports =
     atom.workspace.getActiveTextEditor()
 
   dump: ->
+    console.log @isLocked()
     @history.dump '', true
 
   debug: (msg) ->
