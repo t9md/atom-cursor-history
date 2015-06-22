@@ -8,12 +8,13 @@ Flasher    = null
 settings   = require './settings'
 
 module.exports =
-  config: settings.config
-  history: null
+  config:     settings.config
+  history:    null
+  lastEditor: null
+  locked:     false
+
   subscriptions: null
   editorSubscriptions: null
-  lastEditor: null
-  locked: false
 
   # Experiment
   openTags: null
@@ -108,84 +109,83 @@ module.exports =
       #   #   console.log "after", @panel.isVisible()
       #   # , 300
 
-  symbolsViewHandlers:
-    FileView: (panel) ->
-      @withPanel panel,
-        # At the timing symbol-views panel show, first item in symobls
-        # already selected(this mean cursor position have changed).
-        # So we can't use TexitEditor::getCursorBufferPosition(), fotunately,
-        # FileView serialize buffer state initaially, we use this.
-        # symbols-view serialize buffer state initaially, we use this.
-        onShow: =>
-          console.log "Shown FileView"
-          editor = @getEditor()
-          point  = panel.getItem().initialState?.bufferRanges[0].start
-          {editor, point}
-        onHide: =>
-          console.log "Hidden FileView"
-          editor = @getEditor()
-          point  = editor.getCursorBufferPosition()
-          {editor, point}
-
-    ProjectView: (panel) ->
-      @withPanel panel,
-        onShow: =>
-          console.log "Shown ProjectView"
-          editor = @getEditor()
-          point  = editor.getCursorBufferPosition()
-          {editor, point}
-        onHide: =>
-          console.log "Hidden ProjectView"
-          editor = @getEditor()
-          point  = editor.getCursorBufferPosition()
-          {editor, point}
-
   observeModalPanel: ->
+    symbolsViewHandlers =
+      FileView: (panel) ->
+        @withPanel panel,
+          # At the timing symbol-views panel show, first item in symobls
+          # already selected(this mean cursor position have changed).
+          # So we can't use TexitEditor::getCursorBufferPosition(), fotunately,
+          # FileView serialize buffer state initaially, we use this.
+          onShow: =>
+            console.log "Shown FileView"
+            editor = @getEditor()
+            point  = panel.getItem().initialState?.bufferRanges[0].start
+            {editor, point}
+          onHide: =>
+            console.log "Hidden FileView"
+            editor = @getEditor()
+            point  = editor.getCursorBufferPosition()
+            {editor, point}
+
+      ProjectView: (panel) ->
+        @withPanel panel,
+          onShow: =>
+            console.log "Shown ProjectView"
+            editor = @getEditor()
+            point  = editor.getCursorBufferPosition()
+            {editor, point}
+          onHide: =>
+            console.log "Hidden ProjectView"
+            editor = @getEditor()
+            point  = editor.getCursorBufferPosition()
+            {editor, point}
+
     atom.workspace.panelContainers['modal'].onDidAddPanel ({panel, index}) =>
-      # [CAUTION] Simply checking constructor name is not enough
+      item = panel.getItem()
+      name = item.constructor.name
+      # [CAUTION] Simply checking constructor name is not enough.
       # e.g. ProjectView is also used in `fuzzy-finder`.
+      # return unless name in ['GoToView', 'GoBackView', 'FileView', 'ProjectView']
       return unless (name in ['FileView', 'ProjectView']) and
         typeof(item.openTag) is 'function'
 
-      # return unless name in ['GoToView', 'GoBackView', 'FileView', 'ProjectView']
-      return unless name in ['FileView', 'ProjectView']
-      @symbolsViewHandlers[name]?.bind(this)(panel)
+      symbolsViewHandlers[name]?.bind(this)(panel)
 
   observeTextEditors: ->
-    handleChangePath = (editor) =>
+    onDidChangePath = (editor) =>
       orgURI = editor.getURI()
 
-      @editorSubscriptions[editor.id].add editor.onDidChangePath =>
+      editor.onDidChangePath =>
         newURI = editor.getURI()
         @history.rename orgURI, newURI
         @lastEditor.rename orgURI, newURI
         orgURI = newURI
 
-    handleCursorMoved = ({oldBufferPosition, newBufferPosition, cursor}) =>
-      editor = cursor.editor
-      return if editor.hasMultipleCursors()
-      return unless URI = editor.getURI()
-
-      if @needRemember(oldBufferPosition, newBufferPosition)
-        @history.add editor, oldBufferPosition, URI, dumpMessage: "[Cursor moved] save history"
-
-    atom.workspace.observeTextEditors (editor) =>
-      @editorSubscriptions[editor.id] = new CompositeDisposable
-      handleChangePath(editor)
-
-      @editorSubscriptions[editor.id].add editor.onDidChangeCursorPosition (event) =>
+    onDidChangeCursorPosition = (editor) =>
+      editor.onDidChangeCursorPosition ({oldBufferPosition, newBufferPosition}) =>
         return if @isLocked() # for performance
-        return if event.oldBufferPosition.row is event.newBufferPosition.row # for performance.
+        return if editor.hasMultipleCursors()
+        return unless URI = editor.getURI()
+        return if oldBufferPosition.row is newBufferPosition.row # for performance.
         setTimeout =>
           # When symbols-view's modal panel shown, we lock() but its delayed.
           # So checking lock state here is important.
           return if @isLocked()
-          handleCursorMoved event
+          if @needRemember(oldBufferPosition, newBufferPosition)
+            @history.add editor, oldBufferPosition, URI, dumpMessage: "[Cursor moved] save history"
         , 300
 
-      @editorSubscriptions[editor.id].add editor.onDidDestroy =>
+    onDidDestroy = (editor) =>
+      editor.onDidDestroy =>
         @editorSubscriptions[editor.id]?.dispose()
         delete @editorSubscriptions[editor.id]
+
+    atom.workspace.observeTextEditors (editor) =>
+      @editorSubscriptions[editor.id] = new CompositeDisposable
+      @editorSubscriptions[editor.id].add onDidChangePath(editor)
+      @editorSubscriptions[editor.id].add onDidChangeCursorPosition(editor)
+      @editorSubscriptions[editor.id].add onDidDestroy(editor)
 
   observeActivePaneItem: ->
     handlePaneItemChanged = (item) =>
@@ -195,8 +195,6 @@ module.exports =
       {editor, point, URI: lastURI} = @lastEditor.getInfo()
       if not @isLocked() and (lastURI isnt item.getURI())
         @history.add editor, point, lastURI, dumpMessage: "[Pane item changed] save history"
-      console.log "lock?: #{@isLocked()}: #{@_locker}"
-
       @lastEditor.set item
       @debug "set LastEditor #{path.basename(item.getURI())}"
 
@@ -236,10 +234,7 @@ module.exports =
     @subscriptions.add panel.onDidDestroy ->
       panelSubscription.dispose()
 
-  lock: (locker) ->
-    @_locker = locker
-    @locked = true
-
+  lock:     -> @locked = true
   unLock:   -> @locked = false
   isLocked: -> @locked
 
@@ -253,7 +248,7 @@ module.exports =
       URI   = activeEditor.getURI()
       @history.pushToHead activeEditor, point, URI
 
-    @lock "Jump#{direction}"
+    @lock()
 
     {URI, point} = entry
 
