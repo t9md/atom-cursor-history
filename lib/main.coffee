@@ -1,11 +1,19 @@
 {CompositeDisposable, TextEditor} = require 'atom'
 path = require 'path'
-_ = require 'underscore-plus'
 
 History    = null
 LastEditor = null
 Flasher    = null
 settings   = require './settings'
+
+delay = (ms, func) ->
+  setTimeout ->
+    func()
+  , ms
+
+debug = (msg) ->
+  return unless settings.get('debug')
+  console.log msg
 
 module.exports =
   config:     settings.config
@@ -15,9 +23,6 @@ module.exports =
 
   subscriptions: null
   editorSubscriptions: null
-
-  # Experiment
-  openTags: null
 
   activate: ->
     History = require './history'
@@ -52,33 +57,6 @@ module.exports =
     @history?.destroy()
     @history = null
 
-  extendSymbolsView: ->
-    around = (decoration) ->
-      (base) ->
-        (params...) ->
-          callback = -> base params...
-          decoration ([callback].concat params)...
-
-    withAudit = around (cb, params...) ->
-      console.log "Before"
-      cb()
-      console.log "After"
-
-    extendOpenTag = (view) ->
-      openTag = view.openTag.bind(view)
-      view.openTag = withAudit openTag
-      openTag
-
-    @openTags = {}
-    atom.packages.onDidActivatePackage (pack) ->
-      return unless pack.name is 'symbols-view'
-      main = pack.mainModule
-
-      @openTags['FileView']    = extendOpenTag main.createFileView()
-      @openTags['ProjectView'] = extendOpenTag main.createProjectView()
-      @openTags['GoToView']    = extendOpenTag main.createGoToView()
-      @openTags['GoBackView']  = extendOpenTag main.createGoBackView()
-
   # For better handling symbols-view.
   # -------------------------
   observeModalPanel: ->
@@ -90,14 +68,13 @@ module.exports =
           {editor: oldEditor, point: oldPoint} = onDidShow()
         else
           # Final position is set after some delay from panel hidden.
-          setTimeout =>
+          delay 300, =>
             {editor: newEditor, point: newPoint} = onDidHide()
 
             # FIXME: oldPoint sometimes became undefined, so need to guard
             if oldPoint and newPoint and @needRemember(oldPoint, newPoint)
               @history.add oldEditor, oldPoint, oldEditor.getURI(), dumpMessage: "[Cursor moved] save history"
             @unLock()
-          , 300
 
       @subscriptions.add panel.onDidDestroy =>
         panelSubscription.dispose()
@@ -110,12 +87,12 @@ module.exports =
           # So we can't use TexitEditor::getCursorBufferPosition(), fotunately,
           # FileView serialize buffer state initaially, we use this.
           onDidShow: =>
-            @debug "Shown FileView"
+            debug "Shown FileView"
             editor = @getEditor()
             point  = panel.getItem().initialState?.bufferRanges[0].start
             {editor, point}
           onDidHide: =>
-            @debug "Hidden FileView"
+            debug "Hidden FileView"
             editor = @getEditor()
             point  = @getPosition editor
             {editor, point}
@@ -123,12 +100,12 @@ module.exports =
       ProjectView: (panel) =>
         withPanel panel,
           onDidShow: =>
-            @debug "Shown ProjectView"
+            debug "Shown ProjectView"
             editor = @getEditor()
             point  = @getPosition editor
             {editor, point}
           onDidHide: =>
-            @debug "Hidden ProjectView"
+            debug "Hidden ProjectView"
             editor = @getEditor()
             point  = @getPosition editor
             {editor, point}
@@ -153,19 +130,24 @@ module.exports =
         oldURI = newURI
 
     onDidChangeCursorPosition = (editor) =>
-      editor.onDidChangeCursorPosition ({oldBufferPosition, newBufferPosition}) =>
+      editor.onDidChangeCursorPosition ({oldBufferPosition, newBufferPosition, cursor}) =>
         return if @isLocked() # for performance
         return if editor.hasMultipleCursors()
         return if oldBufferPosition.row is newBufferPosition.row # for performance
         return unless @needRemember(oldBufferPosition, newBufferPosition)
 
-        setTimeout =>
+        delay 300, =>
           # When symbols-view's modal panel shown, we lock() but its delayed.
           # So we need lock state again here after some delay.
           return if @isLocked()
-          # @debug "Move #{oldBufferPosition.toString()} -> #{newBufferPosition.toString()}"
+
+          # Ignore Rapid movement, dirty workaround for GoToView, GoBackView.
+          unless newBufferPosition.isEqual @getPosition(editor)
+            debug "Rapid movement ignore!"
+            return
+
+          # debug "Move #{oldBufferPosition.toString()} -> #{newBufferPosition.toString()}"
           @history.add editor, oldBufferPosition, editor.getURI(), dumpMessage: "[Cursor moved] save history"
-        , 300
 
     onDidDestroy = (editor) =>
       editor.onDidDestroy =>
@@ -188,7 +170,7 @@ module.exports =
       if not @isLocked() and (lastURI isnt item.getURI())
         @history.add editor, point, lastURI, dumpMessage: "[Pane item changed] save history"
       @lastEditor.set item
-      @debug "set LastEditor #{path.basename(item.getURI())}"
+      debug "set LastEditor #{path.basename(item.getURI())}"
 
     atom.workspace.observeActivePaneItem (item) =>
       if item instanceof TextEditor and item.getURI()
@@ -215,7 +197,7 @@ module.exports =
     return unless entry  = @history["get#{direction}"]()
 
     if direction is 'Prev' and @history.isNewest()
-      point = @getPosition()
+      point = @getPosition editor
       URI   = editor.getURI()
       @history.pushToHead editor, point, URI
 
@@ -248,13 +230,9 @@ module.exports =
   getEditor: ->
     atom.workspace.getActiveTextEditor()
 
-  getPosition: (editor=@getEditor())->
+  getPosition: (editor) ->
     editor.getCursorBufferPosition()
 
   dump: ->
     console.log @isLocked()
     @history.dump '', true
-
-  debug: (msg) ->
-    return unless settings.get('debug')
-    console.log msg
