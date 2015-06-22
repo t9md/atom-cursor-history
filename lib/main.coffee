@@ -115,6 +115,7 @@ module.exports =
         # already selected(this mean cursor position have changed).
         # So we can't use TexitEditor::getCursorBufferPosition(), fotunately,
         # FileView serialize buffer state initaially, we use this.
+        # symbols-view serialize buffer state initaially, we use this.
         onShow: =>
           console.log "Shown FileView"
           editor = @getEditor()
@@ -141,9 +142,6 @@ module.exports =
 
   observeModalPanel: ->
     atom.workspace.panelContainers['modal'].onDidAddPanel ({panel, index}) =>
-      item = panel.getItem()
-      name = item.constructor.name
-
       # [CAUTION] Simply checking constructor name is not enough
       # e.g. ProjectView is also used in `fuzzy-finder`.
       return unless (name in ['FileView', 'ProjectView']) and
