@@ -1,3 +1,7 @@
+## 0.4.12 - Improve
+* Refactoring
+* Better integration with symbols-view #3
+
 ## 0.4.11 - Improve
 * Fix disposable() on TextEditor::destroy()
 

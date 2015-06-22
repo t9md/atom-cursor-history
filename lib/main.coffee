@@ -1,5 +1,6 @@
 {CompositeDisposable, TextEditor} = require 'atom'
 path = require 'path'
+_ = require 'underscore-plus'
 
 History    = null
 LastEditor = null
@@ -13,7 +14,9 @@ module.exports =
   editorSubscriptions: null
   lastEditor: null
   locked: false
-  _locker: null
+
+  # Experiment
+  openTags: null
 
   activate: ->
     History = require './history'
@@ -38,6 +41,7 @@ module.exports =
     @subscriptions.add @observeTextEditors()
     @subscriptions.add @observeActivePaneItem()
     @subscriptions.add @observeOnWillDestroyPaneItem()
+    # @subscriptions.add @extendSymbolsView()
 
   deactivate: ->
     for editorID, disposables of @editorSubscriptions
@@ -47,6 +51,62 @@ module.exports =
     settings.dispose()
     @history?.destroy()
     @history = null
+
+  extendSymbolsView: ->
+    around = (decoration) ->
+      (base) ->
+        (params...) ->
+          callback = -> base params...
+          decoration ([callback].concat params)...
+
+    withAudit = around (cb, params...) ->
+      console.log "Before"
+      cb()
+      console.log "After"
+
+    extendOpenTag = (view) ->
+      openTag = view.openTag.bind(view)
+      view.openTag = withAudit openTag
+      openTag
+
+    atom.packages.onDidActivatePackage (pack) ->
+      return unless pack.name is 'symbols-view'
+      console.log "CALLED"
+      main = pack.mainModule
+
+      @openTags['FileView']    = extendOpenTag main.createFileView()
+      @openTags['ProjectView'] = extendOpenTag main.createProjectView()
+      @openTags['GoToView']    = extendOpenTag main.createGoToView()
+      @openTags['GoBackView']  = extendOpenTag main.createGoBackView()
+
+      # fileView = main.createProjectView()
+      # fileView = main.createGoToView()
+
+      # fileView.openTag = (params...) ->
+      #   console.log "Before"
+      #   console.log @stack
+      #   console.log @constructor.name
+      #   openTag params...
+      #   console.log "After"
+      #
+      console.log result
+      # libPath = path.join(atom.packages.resolvePackagePath('symbols-view') , 'lib', 'symbols-view')
+      # SymbolsView = require libPath
+      # _openTag = SymbolsView::openTag
+      # SymbolsView::openTag = (params...) ->
+      #   # if @constructor
+      #   # setTimeout =>
+      #   #   console.log "before", @panel.isVisible()
+      #   # , 300
+      #   console.log "Before"
+      #   console.log @stack
+      #   console.log @constructor.name
+      #   _openTag.call(this, params...)
+      #   console.log "After"
+      #   console.log @stack
+      #   # setTimeout =>
+      #   #   console.log "after", @panel.isVisible()
+      #   # , 300
 
   symbolsViewHandlers:
     FileView: (panel) ->
@@ -89,6 +149,8 @@ module.exports =
       return unless (name in ['FileView', 'ProjectView']) and
         typeof(item.openTag) is 'function'
 
+      # return unless name in ['GoToView', 'GoBackView', 'FileView', 'ProjectView']
+      return unless name in ['FileView', 'ProjectView']
       @symbolsViewHandlers[name]?.bind(this)(panel)
 
   observeTextEditors: ->

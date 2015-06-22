@@ -62,3 +62,5 @@ On following event, cursor position just before the event is saved to history.
 - [x] Better history concatenation(Vim-like).
 - [x] Use Marker if I can, use Point for destroyed editor to avoid error.
 - [x] Save history on ActiveTextEditor change.
+- [x] Better integration with symbols-view's FileView, ProjectView.
+- [x] Better integration with symbols-view's GoToView, GoBackView
