@@ -11,6 +11,7 @@ Jump to next and previous cursor position by keeping track of cursor position.
 * Aware file renaming.
 * Vim like history concatnation(Never save same line per file. This allow you to jump specific line only once).
 * Auto adjust cursor position to middle of screen if target was off-screen.
+* Save cursor history on only symbols-views shown, hidden.
 
 # Keymap
 
@@ -44,9 +45,10 @@ Use following command or set Keymap.
 
 # What condition cursor history will be kept?
 
-On following event, cursor position just before the event is saved to history.
+On following event, old cursor position is saved to history.
 * When another file opened(ActiveTextEditor's `getURI()` changed)
 * When the row delta between old and new cursor position exceeds `rowDeltaToRemember`(default 4).  
+* When [symbols-view](https://github.com/atom/symbols-view) jump finished.
 
 # TODO
 - [ ] Support serialization to support per-project cursor history.

@@ -1,6 +1,7 @@
 ## 0.4.12 - Improve
-* Refactoring
+* Refactoring.
 * Better integration with symbols-view #3
+* Delaying unlock() to avoid unlocking while sequential `next`, `prev` jump.
 
 ## 0.4.11 - Improve
 * Fix disposable() on TextEditor::destroy()
