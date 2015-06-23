@@ -1,4 +1,4 @@
-{CompositeDisposable, TextEditor} = require 'atom'
+{CompositeDisposable, TextEditor, Emitter} = require 'atom'
 path = require 'path'
 
 History    = null
@@ -24,13 +24,21 @@ module.exports =
   subscriptions: null
   editorSubscriptions: null
 
+  onWillJumpToHistory: (callback) ->
+    @emitter.on 'will-jump-to-history', callback
+
+  onDidJumpToHistory:  (callback) ->
+    @emitter.on 'did-jump-to-history', callback
+
   activate: ->
     History = require './history'
     LastEditor = require './last-editor'
 
+
     @subscriptions = new CompositeDisposable
     @editorSubscriptions = {}
-    @history = new History settings.get('max')
+    @emitter       = new Emitter
+    @history       = new History settings.get('max')
 
     @rowDeltaToRemember = settings.get('rowDeltaToRemember')
     settings.onDidChange 'rowDeltaToRemember', ({newValue}) =>
@@ -47,6 +55,14 @@ module.exports =
     @subscriptions.add @observeTextEditors()
     @subscriptions.add @observeActivePaneItem()
     @subscriptions.add @observeOnWillDestroyPaneItem()
+    @subscriptions.add @onWillJumpToHistory (direction) =>
+      @lock()
+
+    @subscriptions.add @onDidJumpToHistory (direction) =>
+      @unLock()
+      Flasher ?= require './flasher'
+      Flasher.flash() if settings.get('flashOnLand')
+      @history.dump direction
 
   deactivate: ->
     for editorID, disposables of @editorSubscriptions
@@ -56,6 +72,7 @@ module.exports =
     settings.dispose()
     @history?.destroy()
     @history = null
+    @emitter = null
 
   # For better handling symbols-view.
   # -------------------------
@@ -113,7 +130,6 @@ module.exports =
     atom.workspace.panelContainers['modal'].onDidAddPanel ({panel, index}) =>
       # [CAUTION] Simply checking constructor name is not enough.
       # e.g. ProjectView is also used in `fuzzy-finder`.
-      # return unless name in ['GoToView', 'GoBackView', 'FileView', 'ProjectView']
       item = panel.getItem()
       name = item.constructor.name
       if name in ['FileView', 'ProjectView'] and typeof(item.openTag) is 'function'
@@ -141,7 +157,7 @@ module.exports =
           # So we need lock state again here after some delay.
           return if @isLocked()
 
-          # Ignore Rapid movement, dirty workaround for GoToView, GoBackView.
+          # Ignore Rapid movement, dirty workaround for symbols-view's GoToView, GoBackView.
           unless newBufferPosition.isEqual @getPosition(editor)
             debug "Rapid movement ignore!"
             return
@@ -192,6 +208,7 @@ module.exports =
   isLocked: -> @locked
 
   jump: (direction) ->
+    # console.log "Jump! #{direction}"
     # Settings tab is not TextEditor instance.
     return unless editor = @getEditor()
     return unless entry  = @history["get#{direction}"]()
@@ -201,7 +218,8 @@ module.exports =
       URI   = editor.getURI()
       @history.pushToHead editor, point, URI
 
-    @lock()
+    @emitter.emit 'will-jump-to-history', direction
+    # @lock()
 
     {URI, point} = entry
     if editor.getURI() is URI # Same pane.
@@ -210,7 +228,8 @@ module.exports =
       editor.setCursorBufferPosition point, autoscroll: false
       # Adjust cursor position to middle of screen.
       editor.scrollToCursorPosition()
-      @land direction
+      # @land direction
+      @emitter.emit 'did-jump-to-history', direction
     else
       # Jump to different pane
       options =
@@ -219,7 +238,8 @@ module.exports =
       atom.workspace.open(URI, options).done (editor) =>
         editor.scrollToBufferPosition(point, center: true)
         editor.setCursorBufferPosition(point)
-        @land direction
+        # @land direction
+        @emitter.emit 'did-jump-to-history', direction
 
   land: (direction) ->
     @unLock()
