@@ -1,4 +1,4 @@
-{CompositeDisposable, TextEditor, Emitter} = require 'atom'
+{CompositeDisposable, TextEditor} = require 'atom'
 path = require 'path'
 
 History    = null
@@ -20,24 +20,17 @@ module.exports =
   history:    null
   lastEditor: null
   locked:     false
+  delayedUnLockTask: null
 
   subscriptions: null
   editorSubscriptions: null
-
-  onWillJumpToHistory: (callback) ->
-    @emitter.on 'will-jump-to-history', callback
-
-  onDidJumpToHistory:  (callback) ->
-    @emitter.on 'did-jump-to-history', callback
 
   activate: ->
     History = require './history'
     LastEditor = require './last-editor'
 
-
     @subscriptions = new CompositeDisposable
     @editorSubscriptions = {}
-    @emitter       = new Emitter
     @history       = new History settings.get('max')
 
     @rowDeltaToRemember = settings.get('rowDeltaToRemember')
@@ -55,24 +48,16 @@ module.exports =
     @subscriptions.add @observeTextEditors()
     @subscriptions.add @observeActivePaneItem()
     @subscriptions.add @observeOnWillDestroyPaneItem()
-    @subscriptions.add @onWillJumpToHistory (direction) =>
-      @lock()
-
-    @subscriptions.add @onDidJumpToHistory (direction) =>
-      @unLock()
-      Flasher ?= require './flasher'
-      Flasher.flash() if settings.get('flashOnLand')
-      @history.dump direction
 
   deactivate: ->
     for editorID, disposables of @editorSubscriptions
       disposables.dispose()
+    @delayedUnLockTask = null
     @editorSubscriptions = null
     @subscriptions.dispose()
     settings.dispose()
     @history?.destroy()
     @history = null
-    @emitter = null
 
   # For better handling symbols-view.
   # -------------------------
@@ -157,6 +142,10 @@ module.exports =
           # So we need lock state again here after some delay.
           return if @isLocked()
 
+          # In rapid Prev, Next movement, editor might be destroyed already.
+          # [NOTE] This should not needed any more because of delayedUnLock()
+          # unless editor.isAlive()
+
           # Ignore Rapid movement, dirty workaround for symbols-view's GoToView, GoBackView.
           unless newBufferPosition.isEqual @getPosition(editor)
             debug "Rapid movement ignore!"
@@ -218,8 +207,7 @@ module.exports =
       URI   = editor.getURI()
       @history.pushToHead editor, point, URI
 
-    @emitter.emit 'will-jump-to-history', direction
-    # @lock()
+    @lock()
 
     {URI, point} = entry
     if editor.getURI() is URI # Same pane.
@@ -228,8 +216,7 @@ module.exports =
       editor.setCursorBufferPosition point, autoscroll: false
       # Adjust cursor position to middle of screen.
       editor.scrollToCursorPosition()
-      # @land direction
-      @emitter.emit 'did-jump-to-history', direction
+      @land direction
     else
       # Jump to different pane
       options =
@@ -238,11 +225,18 @@ module.exports =
       atom.workspace.open(URI, options).done (editor) =>
         editor.scrollToBufferPosition(point, center: true)
         editor.setCursorBufferPosition(point)
-        # @land direction
-        @emitter.emit 'did-jump-to-history', direction
+        @land direction
+
+  delayedUnLock: (ms) ->
+    clearTimeout @delayedUnLockTask
+    @delayedUnLockTask = delay ms, =>
+      @unLock()
 
   land: (direction) ->
-    @unLock()
+    # To keep locking while rapid Prev, Next jump.
+    # Without this, cursorPosition was saved in slite unlocked gap.
+    @delayedUnLock 300
+
     Flasher ?= require './flasher'
     Flasher.flash() if settings.get('flashOnLand')
     @history.dump direction
