@@ -142,9 +142,7 @@ module.exports =
           # So we need lock state again here after some delay.
           return if @isLocked()
 
-          # In rapid Prev, Next movement, editor might be destroyed already.
-          # [NOTE] This should not needed any more because of delayedUnLock()
-          # unless editor.isAlive()
+          return unless editor.isAlive()
 
           # Ignore Rapid movement, dirty workaround for symbols-view's GoToView, GoBackView.
           unless newBufferPosition.isEqual @getPosition(editor)

@@ -1,3 +1,6 @@
+## 0.4.13 - FIX
+* Fix editor already destroyed in delayed execution.
+
 ## 0.4.12 - Improve
 * Refactoring.
 * Better integration with symbols-view #3
