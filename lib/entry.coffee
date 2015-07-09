@@ -1,3 +1,4 @@
+{CompositeDisposable} = require 'atom'
 fs       = require 'fs'
 settings = require './settings'
 path     = null
@@ -11,20 +12,30 @@ class Entry
   marker:     null
   disposable: null
 
-  constructor: (@editor, @point, @URI) ->
-    if @editor.isAlive()
-      @marker = @editor.markBufferPosition @point, invalidate: 'never', persistent: false
-      @disposable = @marker.onDidChange ({newHeadBufferPosition}) =>
+  constructor: (editor, @point, @URI) ->
+    @editorAlive = editor.isAlive()
+    if @editorAlive
+      @subscriptions = new CompositeDisposable
+      @subscriptions.add editor.onDidDestroy =>
+        @editorAlive = false
+        @marker?.destroy()
+        @marker = null
+        @subscriptions.dispose()
+        @subscriptions = null
+      @marker = editor.markBufferPosition @point, invalidate: 'never', persistent: false
+      @subscriptions.add @marker.onDidChange ({newHeadBufferPosition}) =>
         @point = newHeadBufferPosition
 
   destroy: ->
     @marker?.destroy()
-    @disposable?.dispose()
+    @marker = null
+    @subscriptions?.dispose()
+    @subscriptions = null
     @destroyed = true
 
   isValid: ->
     if settings.get('excludeClosedBuffer')
-      fs.existsSync(@URI) and @editor.isAlive()
+      fs.existsSync(@URI) and @editorAlive
     else
       fs.existsSync @URI
 
