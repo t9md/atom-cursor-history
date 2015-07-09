@@ -12,30 +12,31 @@ class Entry
   marker:     null
   disposable: null
 
-  constructor: (editor, @point, @URI) ->
-    @editorAlive = editor.isAlive()
-    if @editorAlive
+  constructor: (@editor, @point, @URI) ->
+    if @editor.isAlive()
       @subscriptions = new CompositeDisposable
-      @subscriptions.add editor.onDidDestroy =>
-        @editorAlive = false
-        @marker?.destroy()
-        @marker = null
-        @subscriptions.dispose()
-        @subscriptions = null
-      @marker = editor.markBufferPosition @point, invalidate: 'never', persistent: false
+      @marker = @editor.markBufferPosition @point, invalidate: 'never', persistent: false
+
       @subscriptions.add @marker.onDidChange ({newHeadBufferPosition}) =>
         @point = newHeadBufferPosition
+      @subscriptions.add @editor.onDidDestroy =>
+        @releaseEditor()
+
+  releaseEditor: ->
+    @editor = null
+    @marker.destroy()
+    @marker = null
+    @subscriptions.dispose()
+    @subscriptions = null
 
   destroy: ->
-    @marker?.destroy()
-    @marker = null
-    @subscriptions?.dispose()
-    @subscriptions = null
+    if @editor?.isAlive()
+      @releaseEditor()
     @destroyed = true
 
   isValid: ->
     if settings.get('excludeClosedBuffer')
-      fs.existsSync(@URI) and @editorAlive
+      fs.existsSync(@URI) and @editor?.isAlive()
     else
       fs.existsSync @URI
 
