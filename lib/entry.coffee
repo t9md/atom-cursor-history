@@ -13,14 +13,21 @@ class Entry
   disposable: null
 
   constructor: (@editor, @point, @URI) ->
-    if @editor.isAlive()
-      @subscriptions = new CompositeDisposable
-      @marker = @editor.markBufferPosition @point, invalidate: 'never', persistent: false
+    # We need @editor only when editor.isAlive() to update @point.
+    unless @editor.isAlive()
+      @editor = null
+      return
 
-      @subscriptions.add @marker.onDidChange ({newHeadBufferPosition}) =>
-        @point = newHeadBufferPosition
-      @subscriptions.add @editor.onDidDestroy =>
-        @releaseEditor()
+    @subscriptions = new CompositeDisposable
+    @marker = @editor.markBufferPosition @point,
+      invalidate: 'never',
+      persistent: false
+
+    @subscriptions.add @marker.onDidChange ({newHeadBufferPosition}) =>
+      @point = newHeadBufferPosition
+
+    @subscriptions.add @editor.onDidDestroy =>
+      @releaseEditor()
 
   releaseEditor: ->
     @editor = null

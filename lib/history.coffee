@@ -82,9 +82,6 @@ class History
         @index -= 1
     return null
 
-
-  # rename: (oldURI, , point, URI) ->
-  #   @add editor, point, URI, false
   # History concatenation mimicking Vim's way.
   # newMarker(=old position from where you jump to land here) is
   # *always* added to end of @entries.
