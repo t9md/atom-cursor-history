@@ -1,3 +1,6 @@
+## 0.4.14 - FIX
+* Fix #5 TexEditor was not released immediately after destroyed. Thanks @aki77
+
 ## 0.4.13 - FIX
 * Fix editor already destroyed in delayed execution.
 
