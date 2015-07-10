@@ -3,7 +3,7 @@ settings  = require './settings'
 
 module.exports =
 class Flasher
-  @flash: (editor, range) =>
+  @flash: =>
     @clear()
     editor = atom.workspace.getActiveTextEditor()
     spec =

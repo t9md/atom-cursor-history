@@ -1,3 +1,6 @@
+## [PRE] 0.4.15 - Improve
+* Remove unnecessary Flasher.flash arguments.
+
 ## 0.4.14 - FIX
 * Fix #5 TexEditor was not released immediately after destroyed. Thanks @aki77
 
