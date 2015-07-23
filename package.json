@@ -1,7 +1,7 @@
 {
   "name": "cursor-history",
   "main": "./lib/main",
-  "version": "0.4.14",
+  "version": "0.4.15",
   "description": "Cursor position history manager",
   "repository": "https://github.com/t9md/atom-cursor-history",
   "license": "MIT",
