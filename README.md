@@ -28,7 +28,7 @@ No keymap by default.
 * if you use [vim-mode](https://atom.io/packages/vim-mode)
 
 ```coffeescript
-'atom-text-editor.vim-mode.command-mode':
+'atom-text-editor.vim-mode.normal-mode':
   'ctrl-i': 'cursor-history:next'
   'ctrl-o': 'cursor-history:prev'
   # or
