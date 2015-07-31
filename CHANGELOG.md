@@ -1,3 +1,6 @@
+## 0.4.17 - FIX
+* Not ideal way of fix, but need to avoid exception again. #7
+
 ## 0.4.16 - FIX
 * Not ideal way of fix, but need to avoid exception #7
 
