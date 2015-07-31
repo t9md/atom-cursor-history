@@ -1,3 +1,6 @@
+## 0.4.16 - FIX
+* Not ideal way of fix, but need to avoid exception #7
+
 ## 0.4.15 - Improve
 * Remove unnecessary Flasher.flash arguments.
 * Update readme to follow vim-mode's command-mode to normal-mode

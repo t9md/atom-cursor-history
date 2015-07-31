@@ -56,4 +56,4 @@ class Entry
 
   isSameRow: (otherEntry) ->
     {URI, point} = otherEntry
-    (URI is @URI) and (point.row is @point.row)
+    (URI is @URI) and (point.row is @point?.row)
