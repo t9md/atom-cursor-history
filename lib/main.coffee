@@ -1,4 +1,5 @@
 {CompositeDisposable, TextEditor} = require 'atom'
+_ = require 'underscore-plus'
 path = require 'path'
 
 History    = null
@@ -65,6 +66,7 @@ module.exports =
     withPanel = (panel, {onDidShow, onDidHide}) =>
       [oldEditor, oldPoint, newEditor, newPoint] = []
       panelSubscription = panel.onDidChangeVisible (visible) =>
+        return unless @getEditor()
         if visible
           @lock()
           {editor: oldEditor, point: oldPoint} = onDidShow()
@@ -117,7 +119,7 @@ module.exports =
       # e.g. ProjectView is also used in `fuzzy-finder`.
       item = panel.getItem()
       name = item.constructor.name
-      if name in ['FileView', 'ProjectView'] and typeof(item.openTag) is 'function'
+      if name in ['FileView', 'ProjectView'] and _.isFunction(item.openTag)
         symbolsViewHandlers[name]?(panel)
 
   observeTextEditors: ->
