@@ -7,9 +7,9 @@ LastEditor = null
 Flasher    = null
 settings   = require './settings'
 
-delay = (ms, func) ->
+delay = (ms, fun) ->
   setTimeout ->
-    func()
+    fun()
   , ms
 
 debug = (msg) ->
@@ -43,7 +43,7 @@ module.exports =
       'cursor-history:prev':  => @jump('Prev')
       'cursor-history:clear': => @history.clear()
       'cursor-history:dump':  => @dump()
-      'cursor-history:toggle-debug': => settings.toggle 'debug', log: true
+      'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
     @subscriptions.add @observeModalPanel()
     @subscriptions.add @observeTextEditors()
@@ -80,7 +80,7 @@ module.exports =
               @history.add oldEditor, oldPoint, oldEditor.getURI(), dumpMessage: "[Cursor moved] save history"
             @unLock()
 
-      @subscriptions.add panel.onDidDestroy =>
+      @subscriptions.add panel.onDidDestroy ->
         panelSubscription.dispose()
 
     symbolsViewHandlers =
@@ -114,7 +114,7 @@ module.exports =
             point  = @getPosition editor
             {editor, point}
 
-    atom.workspace.panelContainers['modal'].onDidAddPanel ({panel, index}) =>
+    atom.workspace.panelContainers['modal'].onDidAddPanel ({panel, index}) ->
       # [CAUTION] Simply checking constructor name is not enough.
       # e.g. ProjectView is also used in `fuzzy-finder`.
       item = panel.getItem()
@@ -177,12 +177,12 @@ module.exports =
       @lastEditor.set item
       debug "set LastEditor #{path.basename(item.getURI())}"
 
-    atom.workspace.observeActivePaneItem (item) =>
+    atom.workspace.observeActivePaneItem (item) ->
       if item instanceof TextEditor and item.getURI()
         handlePaneItemChanged item
 
   observeOnWillDestroyPaneItem: ->
-    atom.workspace.onWillDestroyPaneItem ({item}) =>
+    atom.workspace.onWillDestroyPaneItem ({item}) ->
       if item instanceof TextEditor and item.getURI()
         LastEditor.saveDestroyedEditor item
 
