@@ -17,7 +17,7 @@ class Flasher
       when 'point'
         point = editor.getCursorBufferPosition()
         type: 'highlight'
-        range: new Range(point, point.translate([0,1]))
+        range: new Range(point, point.translate([0, 1]))
 
     marker = editor.markBufferRange spec.range,
       invalidate: 'never'

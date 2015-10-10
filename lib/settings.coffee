@@ -1,6 +1,6 @@
 ConfigPlus = require 'atom-config-plus'
 
-config =
+module.exports = new ConfigPlus 'cursor-history',
   max:
     order: 11
     type: 'integer'
@@ -38,7 +38,7 @@ config =
     type: 'string'
     default: 'info'
     enum: ['info', 'success', 'warning', 'error', 'highlight', 'selected']
-    description: 'flash color style, correspoinding to @background-color-#{flashColor}: see `styleguide:show`'
+    description: 'flash color style, correspoinding to @background-color-{flashColor}: see `styleguide:show`'
   flashType:
     order: 35
     type: 'string'
@@ -50,5 +50,3 @@ config =
     type: 'boolean'
     default: false
     description: "Output history on console.log"
-
-module.exports = new ConfigPlus('cursor-history', config)

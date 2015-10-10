@@ -1,29 +1,26 @@
 _        = require 'underscore-plus'
 Entry    = require './entry'
 settings = require './settings'
+{debug} = require './utils'
 
-debug = (msg) ->
-  return unless settings.get('debug')
-  console.log msg
-
-module.exports =
 class History
   entries: []
   index: 0
 
   constructor: (@max) ->
-    @reset()
+    @init()
 
-  reset: ->
-    @index   = 0
+  init: ->
+    @index = 0
     @entries = []
 
   clear: ->
-    entry.destroy() for entry in @entries
-    @reset()
+    e.destroy() for e in @entries
+    @init()
 
-  destroy:   -> @clear()
-  serialize: ->
+  destroy: ->
+    e.destroy() for e in @entries
+    {@index, @entries} = {}
 
   isOldest: ->
     @isEmpty() or @index is 0
@@ -35,52 +32,48 @@ class History
     @entries.length is 0
 
   rename: (oldURI, newURI) ->
-    for entry in @entries when entry.URI is oldURI
-      entry.URI = newURI
+    for e in @entries when e.URI is oldURI
+      e.setURI(newURI)
 
-  get: (index) -> @entries[index]
-  getCurrent:  -> @get @index
-
-  getNext: ->
-    if @isNewest()
-      @dump "Newest"
-      return
-    @getValid 'Next'
-
-  getPrev: ->
-    if @isOldest()
-      @dump "Oldest"
-      return
-    @getValid 'Prev'
-
-  removeCurrent: -> @remove @index
-
-  remove: (index, count=1) ->
-    entries = @entries.splice(index, count)
-    for entry in entries
-      debug "  Destroy: #{entry.inspect()}"
-      entry.destroy()
-    entries
+  get: (direction='current') ->
+    switch direction
+      when 'next'
+        if @isNewest()
+          @dump "Newest"
+          return
+        @getValid direction
+      when 'prev'
+        if @isOldest()
+          @dump "Oldest"
+          return
+        @getValid direction
+      when 'current'
+        @entries[@index]
 
   getValid: (direction) ->
     until @isEmpty()
-      if direction is 'Next'
-        break if @isNewest()
-        @index += 1
-      else if direction is 'Prev'
-        break if @isOldest()
-        @index -= 1
+      switch direction
+        when 'next'
+          break if @isNewest()
+          @index += 1
+        when 'prev'
+          break if @isOldest()
+          @index -= 1
 
-      entry = @getCurrent()
-
-      if entry.isValid()
-        return entry
+      entry = @get()
+      return entry if entry.isValid()
 
       debug "URI not exist: #{entry.URI} or Buffer closed"
-      @removeCurrent()
-      if direction is 'Next'
+      @remove(@index)
+      if direction is 'next'
         @index -= 1
-    return null
+
+  remove: (index, count=1) ->
+    entries = @entries.splice(index, count)
+    for e in entries
+      debug "  Destroy: #{e.inspect()}"
+      e.destroy()
+    entries
 
   # History concatenation mimicking Vim's way.
   # newMarker(=old position from where you jump to land here) is
@@ -134,11 +127,12 @@ class History
   #    newMarker(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: (editor, point, URI, options={}) ->
+  add: ({editor, point, URI, setIndexToHead, dumpMessage}) ->
+    setIndexToHead ?= true
     newEntry = new Entry(editor, point, URI)
 
     for entry, i in @entries
-      if entry.isSameRow newEntry
+      if entry.isAtSameRow newEntry
         entry.destroy()
         # adjust @index for deletion.
         @index -= 1 if i <= @index
@@ -149,14 +143,11 @@ class History
     if @entries.length > @max
       @remove 0, (@entries.length - @max)
 
-    unless (options.pointIndexToHead is false)
+    if setIndexToHead
       @index = @entries.length
 
-    if options.dumpMessage
-      @dump options.dumpMessage
-
-  pushToHead: (editor, point, URI) ->
-    @add editor, point, URI, pointIndexToHead: false
+    if dumpMessage?
+      @dump dumpMessage
 
   dump: (msg, force=false) ->
     unless force or settings.get('debug')
@@ -167,6 +158,8 @@ class History
         if i is @index
           "> #{i}: #{e.inspect()}"
         else
-          "  #{i}: #{e.inspect()}"), @)
-    entries.push "> #{@index}:" unless @getCurrent()
+          "  #{i}: #{e.inspect()}"), this)
+    entries.push "> #{@index}:" unless @get()
     console.log entries.join("\n"), "\n\n"
+
+module.exports = History
