@@ -22,6 +22,8 @@ module.exports =
     atom.commands.add 'atom-workspace',
       'cursor-history:next':  => @jump('next')
       'cursor-history:prev':  => @jump('prev')
+      'cursor-history:next-within-editor': => @jump('next', true)
+      'cursor-history:prev-within-editor': => @jump('prev', true)
       'cursor-history:clear': => @history.clear()
       'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
@@ -37,7 +39,12 @@ module.exports =
       else
         false
 
-    ignoreCommands = ['cursor-history:next', 'cursor-history:prev']
+    ignoreCommands = [
+      'cursor-history:next',
+      'cursor-history:prev',
+      'cursor-history:next-within-editor',
+      'cursor-history:prev-within-editor',
+    ]
     @subscriptions.add atom.commands.onWillDispatch (event) ->
       {type, target} = event
       return if type in ignoreCommands
@@ -58,7 +65,7 @@ module.exports =
             @emitter.emit 'did-change-location', {type, oldLocation, newLocation}
           else
             unless oldLocation
-              console.log "WHY!!!!! #{type}"
+              console.log "Must not happen #{type}"
               # console.log reportLocation(getLocation(type, target.getModel()))
             @saveHistory(oldLocation, dumpMessage: 'save on focusLost')
           # console.log "finished stackLen #{locationStack.length}"
@@ -113,9 +120,14 @@ module.exports =
         subs.dispose()
         delete @editorSubscriptions[editor.id]
 
-  jump: (direction) ->
+  jump: (direction, withinEditor=false) ->
     return unless editor = atom.workspace.getActiveTextEditor()
-    return unless entry  = @history.get(direction)
+    if withinEditor
+      entry = @history.get(direction, URI: editor.getURI())
+    else
+      entry = @history.get(direction)
+
+    return unless entry
 
     if direction is 'prev' and @history.isNewest()
       @history.add

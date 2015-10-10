@@ -35,7 +35,11 @@ class History
     for e in @entries when e.URI is oldURI
       e.setURI(newURI)
 
-  get: (direction='current') ->
+  get: (direction='current', {URI}={}) ->
+    if URI?
+      while entry = @get(direction)
+        return entry if (entry.URI is URI)
+      null
     switch direction
       when 'next'
         if @isNewest()
