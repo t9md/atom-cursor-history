@@ -1,5 +1,5 @@
-_        = require 'underscore-plus'
-Entry    = require './entry'
+_ = require 'underscore-plus'
+Entry = require './entry'
 settings = require './settings'
 {debug} = require './utils'
 

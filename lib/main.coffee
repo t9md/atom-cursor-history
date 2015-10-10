@@ -5,7 +5,12 @@ path = require 'path'
 History  = require './history'
 Flasher  = require './flasher'
 settings = require './settings'
-{delay, debug, reportLocation} = require './utils'
+{
+  delay,
+  debug,
+  reportLocation
+  getLocation
+} = require './utils'
 
 module.exports =
   config: settings.config
@@ -27,62 +32,19 @@ module.exports =
       'cursor-history:clear': => @history.clear()
       'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
-    locationStack = []
-    getLocation = (type, editor) ->
-      point = editor.getCursorBufferPosition()
-      URI   = editor.getURI()
-      {editor, point, URI, type}
+    subs = []
+    subs.push @observeTextEditors()
+    subs.push @observeCommands()
+    @subscriptions.add(_.flatten(subs)...)
 
-    shouldSaveLocation = ({type, target}) ->
-      if (':' in type) and (editor = target.getModel?()) and editor.getURI?()
-        true
-      else
-        false
-
-    ignoreCommands = [
-      'cursor-history:next',
-      'cursor-history:prev',
-      'cursor-history:next-within-editor',
-      'cursor-history:prev-within-editor',
-    ]
-    @subscriptions.add atom.commands.onWillDispatch (event) ->
-      {type, target} = event
-      return if type in ignoreCommands
-      return unless shouldSaveLocation(event)
-      # debug "WillDispatch: #{type}"
-      locationStack.push getLocation(type, target.getModel())
-
-    @subscriptions.add atom.commands.onDidDispatch (event) =>
-      {type, target} = event
-      return if type in ignoreCommands
-      return unless shouldSaveLocation(event)
-      # debug "DidDispatch: #{type}"
-      # console.log "stackLen #{locationStack.length}"
-      delay 300, do (oldLocation = locationStack.pop()) =>
-        =>
-          if target.hasFocus()
-            newLocation = getLocation(type, target.getModel())
-            @emitter.emit 'did-change-location', {type, oldLocation, newLocation}
-          else
-            unless oldLocation
-              console.log "Must not happen #{type}"
-              # console.log reportLocation(getLocation(type, target.getModel()))
-            @saveHistory(oldLocation, dumpMessage: 'save on focusLost')
-          # console.log "finished stackLen #{locationStack.length}"
-
-    @subscriptions.add @observeTextEditors()
-
-    @subscriptions.add @onDidChangeLocation ({type, oldLocation, newLocation}) =>
-      # debug "old #{reportLocation(oldLocation)}"
-      # debug "new #{reportLocation(newLocation)}"
+    @onDidChangeLocation ({type, oldLocation, newLocation}) =>
       {point: oldPoint, URI: oldURI} = oldLocation
       {point: newPoint, URI: newURI} = newLocation
       switch
-        when oldURI isnt newURI
-          @saveHistory oldLocation
-        when oldPoint.row is newPoint.row
-          return
+        when (oldURI isnt newURI)           then @saveHistory(oldLocation)
+        when (oldPoint.row is newPoint.row) then return
         else
+          console.log [oldPoint.row, newPoint.row]
           if Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
             @saveHistory oldLocation, dumpMessage: "[Cursor moved] save history"
 
@@ -103,6 +65,41 @@ module.exports =
     settings.dispose()
     @history?.destroy()
     @history = null
+
+  observeCommands: ->
+    ignoreCommands = [
+      'cursor-history:next',
+      'cursor-history:prev',
+      'cursor-history:next-within-editor',
+      'cursor-history:prev-within-editor',
+    ]
+    shouldSaveLocation = ({type, target}) ->
+      return false if type in ignoreCommands
+
+      if (':' in type) and (editor = target.getModel?()) and editor.getURI?()
+        true
+      else
+        false
+
+    locationStack = []
+    subs = []
+    subs.push atom.commands.onWillDispatch (event) ->
+      {type, target} = event
+      return unless shouldSaveLocation({type, target})
+      debug "WillDispatch: #{type}"
+      locationStack.push getLocation(type, target.getModel())
+
+    subs.push atom.commands.onDidDispatch (event) =>
+      {type, target} = event
+      return unless shouldSaveLocation({type, target})
+      debug "DidDispatch: #{type}"
+      oldLocation = locationStack.pop()
+      if target.hasFocus()
+        newLocation = getLocation(type, target.getModel())
+        @emitter.emit 'did-change-location', {type, oldLocation, newLocation}
+      else
+        @saveHistory(oldLocation, dumpMessage: 'save on focusLost')
+    subs
 
   observeTextEditors: ->
     atom.workspace.observeTextEditors (editor) =>
