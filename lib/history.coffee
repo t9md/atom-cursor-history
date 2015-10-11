@@ -13,13 +13,11 @@ class History
     @index = 0
     @entries = []
 
-  isEmpty:  -> @entries.length is 0
-  isOldest: -> @isEmpty() or @index is 0
-  isNewest: -> @isEmpty() or @index >= (@entries.length - 1)
+  isEmpty: ->
+    @entries.length is 0
 
-  rename: (oldURI, newURI) ->
-    # console.log "called rename #{oldURI} -> #{newURI}"
-    e.setURI(newURI) for e in @entries when e.URI is oldURI
+  isNewest: ->
+    @isEmpty() or @index >= (@entries.length - 1)
 
   isValidIndex: (index) ->
     0 <= index <= (@entries.length - 1)
@@ -103,22 +101,19 @@ class History
   #    No special @index adjustment.
   #
   add: ({editor, point, URI, setIndexToHead}) ->
-    current = @get()
     setIndexToHead ?= true
     newEntry = new Entry(editor, point, URI)
-
-    entriesRemove = (e for e in @entries when e.isAtSameRow(newEntry))
-    for e in entriesRemove
+    for e, i in @entries when e.isAtSameRow(newEntry)
       e.destroy()
-      _.remove(@entries, e)
-
+      @index -= 1 if i < @index # adjust @index for deletion.
+    @entries = _.reject @entries, (e) -> e.isDestroyed()
     @entries.push newEntry
 
     if @entries.length > @max
       removed = @entries.splice(0, @entries.length - @max)
       e.destroy() for e in removed
-
-    @index = if setIndexToHead then @entries.length else @entries.indexOf(current)
+    if setIndexToHead
+      @index = @entries.length
 
   clear: ->
     e.destroy() for e in @entries
@@ -129,13 +124,11 @@ class History
     {@index, @entries} = {}
 
   dump: (msg) ->
-    entries = @entries.map(
-      ((e, i) =>
-        if i is @index
-          "> #{i}: #{e.inspect()}"
-        else
-          "  #{i}: #{e.inspect()}"), this)
-    entries.push "> #{@index}:" unless @get()
-    console.log entries.join("\n"), "\n\n"
+    ary = []
+    for e, i in @entries
+      s = if i is @index then "> " else "  "
+      ary.push "#{s}#{i}: #{e.inspect()}"
+    ary.push "> #{@index}:" if (@index is @entries.length)
+    console.log ary.join("\n") + "\n\n"
 
 module.exports = History

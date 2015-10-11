@@ -129,24 +129,26 @@ module.exports =
     saveLocation = (event) ->
       {type, target} = event
       return unless shouldSaveLocation({type, target})
-      # debug "WillDispatch: #{type}"
+      debug "WillDispatch: #{type}"
       locationStack.push getLocation(type, target.getModel())
 
-    subs.push atom.commands.onWillDispatch _.debounce(saveLocation, 200)
+    subs.push atom.commands.onWillDispatch _.debounce(saveLocation, 100, true)
 
     subs.push atom.commands.onDidDispatch (event) =>
       return if locationStack.length is 0
       {type, target} = event
       return unless shouldSaveLocation({type, target})
+      debug "DidDispatch: #{type}"
       @processLocationChange locationStack.pop()
     subs
 
+
   processLocationChange: (oldLocation) ->
     {type} = oldLocation
-    activeEditor = atom.workspace.getActiveTextEditor()
-    editorElement = atom.views.getView(activeEditor)
-    if editorElement.hasFocus() and (activeEditor.getURI() is oldLocation.URI)
-      newLocation = getLocation(type, activeEditor)
+    return unless editor = atom.workspace.getActiveTextEditor()
+    editorElement = atom.views.getView(editor)
+    if editorElement.hasFocus() and (editor.getURI() is oldLocation.URI)
+      newLocation = getLocation(type, editor)
       @emitter.emit 'did-change-location', {type, oldLocation, newLocation}
     else
       @saveHistory(oldLocation, debugTitle: "Save on focus lost")
@@ -155,13 +157,6 @@ module.exports =
     atom.workspace.observeTextEditors (editor) =>
       return unless editor.getURI()
       @editorSubscriptions[editor.id] = subs = new CompositeDisposable
-
-      subs.add editor.onDidChangePath do (editor) =>
-        oldURI = editor.getURI()
-        =>
-          newURI = editor.getURI()
-          @history.rename oldURI, newURI
-          oldURI = newURI
 
       subs.add editor.onDidDestroy =>
         subs.dispose()
@@ -175,30 +170,31 @@ module.exports =
       else
         @history.get(direction)
     return unless entry
-
-    savedHistory = false
-    if direction is 'prev' and @history.isNewest()
-      location =
-        type: 'prev'
-        editor: editor
-        point: editor.getCursorBufferPosition()
-        URI: editor.getURI()
-        setIndexToHead: false
-      @saveHistory(location, debugTitle: "Save head position")
-      savedHistory = true
-
     {URI, point} = entry
-    if editor.getURI() is URI # Same pane.
-      @landToPoint(editor, point)
-      if settings.get('debug') and not savedHistory
+
+    location = null
+    if direction is 'prev' and @history.isNewest()
+      location = getLocation('prev', editor)
+      location.setIndexToHead = false
+
+    task = =>
+      # Since in the process of @saveHistory(), entry might be removed.
+      # so saving after landing is safer and no complication in my brain.
+      if location?
+        @saveHistory(location, debugTitle: "Save head position")
+
+      if settings.get('debug') and not location?
         console.log "# cursor-history: #{direction}"
         @history.dump()
 
+    if editor.getURI() is URI # Same pane.
+      @landToPoint(editor, point)
+      task()
     else # Jump to different pane
-      options = searchAllPanes: settings.get('searchAllPanes')
-      atom.workspace.open(URI, options).done (editor) =>
+      searchAllPanes = settings.get('searchAllPanes')
+      atom.workspace.open(URI, {searchAllPanes}).done (editor) =>
         @landToPoint(editor, point)
-        @history.dump direction
+        task()
 
   landToPoint: (editor, point) ->
     editor.scrollToBufferPosition(point, center: true)

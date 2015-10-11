@@ -4,9 +4,9 @@ debug = (msg) ->
   return unless settings.get('debug')
   console.log msg
 
-delay = (ms, fun) ->
+delay = (ms, fn) ->
   setTimeout ->
-    fun()
+    fn()
   , ms
 
 reportLocation = (location) ->

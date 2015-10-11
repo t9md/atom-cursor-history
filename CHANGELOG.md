@@ -1,3 +1,13 @@
+## 0.5.0 - Improve, completely rewriten
+* now use atom.commands.onWillDispatch/onDidDispatch
+  instead of onDidChangeCursorPosition
+* No longer track renamed buffer, since its make things confuse
+  It even tracked files which was removed and moved to system's trash folder.
+* Now resilient for cursor position change happen internally in several commands.
+* As a result no longer need workaround for symbols-view's cursor internal movement.
+  Now work further well with symbols-view and other packages.
+* [New command] to move to next/prev only within current active editor.
+
 ## 0.4.18 - FIX
 * Don't throw error when executed on not-editor buffer(like project-find-result) #8
 

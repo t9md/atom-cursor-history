@@ -1,17 +1,9 @@
 # cursor-history
 
-Jump to next and previous cursor position by keeping track of cursor position.
+Like browser's Go and Back button, like `ctrl-i`, `ctrl-o` in Vim.
+You can go/back to cursor position history.
 
-![gif](https://raw.githubusercontent.com/t9md/t9md/8b86b09ff01f3dbb45324119cfd41c39f16b115e/img/atom-cursor-history.gif)
-
-# Features
-
-* Flash cursor line on land. Can disable or customize flash color, duration and type(line, word, point).
-* Can jump to prev/next point of closed Buffer(can configure exclude closed).
-* Aware file renaming.
-* Vim like history concatnation(Never save same line per file. This allow you to jump specific line only once).
-* Auto adjust cursor position to middle of screen if target was off-screen.
-* Save cursor history on only symbols-views shown, hidden.
+![gif](https://raw.githubusercontent.com/t9md/t9md/3d4a0bd38ac9571510d5ba52aa5361897b123218/img/atom-cursor-history.gif)
 
 # Keymap
 
@@ -21,36 +13,37 @@ No keymap by default.
 
 ```coffeescript
 'atom-workspace':
-  'ctrl-i': 'cursor-history:next'
-  'ctrl-o': 'cursor-history:prev'
+  'ctrl-i':     'cursor-history:next'
+  'ctrl-o':     'cursor-history:prev'
+  'ctrl-cmd-i': 'cursor-history:next-within-editor'
+  'ctrl-cmd-o': 'cursor-history:prev-within-editor'
 ```
 
-* if you use [vim-mode](https://atom.io/packages/vim-mode)
+# Features
 
-```coffeescript
-'atom-text-editor.vim-mode.normal-mode':
-  'ctrl-i': 'cursor-history:next'
-  'ctrl-o': 'cursor-history:prev'
-  # or
-  ']': 'cursor-history:next'
-  '[': 'cursor-history:prev'
-```
+* Can jump to prev/next point of closed Buffer(can configure exclude closed buffer).
+* Flash cursor line on land. Can disable or customize flash color, duration and type(line, word, point).
+* Vim like history concatnation(Never save same line per file. This allow you to jump specific line only once).
+* Auto adjust cursor position to middle of screen if target was off-screen.
 
-# How to use
+# Commands
 
 Use following command or set Keymap.
 * `cursor-history:next`: Go to next point in history.
 * `cursor-history:prev`: Go to previous point in history.
+* `cursor-history:next-within-editor`: Go to next point in history within current editor.
+* `cursor-history:prev-within-editor`: Go to previous point in history within current editor.
 * `cursor-history:clear`: Clear history.
 
 # What condition cursor history will be kept?
 
-On following event, old cursor position is saved to history.
-* When another file opened(ActiveTextEditor's `getURI()` changed)
-* When the row delta between old and new cursor position exceeds `rowDeltaToRemember`(default 4).  
-* When [symbols-view](https://github.com/atom/symbols-view) jump finished.
+In the following case save previous cursor location as history.
+
+* when editor lost focus.
+* when cursor position's row delta exceeds rows specified by `rowDeltaToRemember`(default 4).
 
 # TODO
+- [x] Don't use editor.onDidChangeCursorPosition, use atom.commands.onDidDispatch instead.
 - [ ] Support serialization to support per-project cursor history.
 - [x] Configuration option to exclude closed buffer.
 - [x] Ensure not open un-existing file.
