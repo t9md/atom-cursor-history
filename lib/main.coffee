@@ -90,6 +90,16 @@ module.exports =
         return unless shouldSaveLocation(target)
         @processLocationChange locationStack.pop()
 
+    # Mouse handling is not primal purpose of this package
+    # I dont' use mouse basically while coding.
+    # So keep codebase minimal and simple,
+    #  I won't use editor::onDidChangeCursorPosition() to track
+    #  cursor position change caused by mouse click.
+
+    # When mouse clicked, cursor position is updated by atom core using setCursorScreenPosition()
+    # To track cursor position change caused by mouse click, I use mousedown event.
+    #  - Event capture phase: Cursor position is not yet changed.
+    #  - Event bubbling phase: Cursor position updated to clicked position.
     workspaceElement = atom.views.getView(atom.workspace)
     workspaceElement.addEventListener 'mousedown', handleCapture, true
     workspaceElement.addEventListener 'mousedown', handleBubble, false
