@@ -1,6 +1,5 @@
 _ = require 'underscore-plus'
 Entry = require './entry'
-settings = require './settings'
 {debug} = require './utils'
 
 class History
@@ -19,6 +18,7 @@ class History
   isNewest: -> @isEmpty() or @index >= (@entries.length - 1)
 
   rename: (oldURI, newURI) ->
+    # console.log "called rename #{oldURI} -> #{newURI}"
     e.setURI(newURI) for e in @entries when e.URI is oldURI
 
   isValidIndex: (index) ->
@@ -102,7 +102,7 @@ class History
   #    newMarker(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: ({editor, point, URI, setIndexToHead, debugTitle}) ->
+  add: ({editor, point, URI, setIndexToHead}) ->
     current = @get()
     setIndexToHead ?= true
     newEntry = new Entry(editor, point, URI)
@@ -120,9 +120,6 @@ class History
 
     @index = if setIndexToHead then @entries.length else @entries.indexOf(current)
 
-    if debugTitle?
-      @dump debugTitle
-
   clear: ->
     e.destroy() for e in @entries
     @init()
@@ -131,10 +128,7 @@ class History
     e.destroy() for e in @entries
     {@index, @entries} = {}
 
-  dump: (msg, force=false) ->
-    unless force or settings.get('debug')
-      return
-    console.log "# cursor-history: #{msg}" if msg
+  dump: (msg) ->
     entries = @entries.map(
       ((e, i) =>
         if i is @index

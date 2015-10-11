@@ -43,20 +43,21 @@ module.exports =
       {point: newPoint, URI: newURI} = newLocation
       switch
         when (oldURI isnt newURI)
-          @saveHistory(oldLocation, debugTitle: "#{type}: URI changed")
+          @saveHistory(oldLocation, debugTitle: "URI changed")
         when (oldPoint.row is newPoint.row)
           return
         else
           if @needRemember(oldPoint, newPoint)
-            @saveHistory oldLocation, debugTitle: "#{type}: Cursor moved"
+            @saveHistory oldLocation, debugTitle: "Cursor moved"
 
   needRemember: (oldPoint, newPoint) ->
     Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
 
   saveHistory: (location, {debugTitle}={}) ->
-    if debugTitle?
-      location.debugTitle = debugTitle
     @history.add location
+    if settings.get('debug')
+      console.log "# cursor-history: #{debugTitle} [#{location.type}]"
+      @history.dump()
 
   onDidChangeLocation: (fn) ->
     @emitter.on 'did-change-location', fn
@@ -148,7 +149,7 @@ module.exports =
       newLocation = getLocation(type, activeEditor)
       @emitter.emit 'did-change-location', {type, oldLocation, newLocation}
     else
-      @saveHistory(oldLocation, debugTitle: "#{type}: save on focus lost")
+      @saveHistory(oldLocation, debugTitle: "Save on focus lost")
 
   observeTextEditors: ->
     atom.workspace.observeTextEditors (editor) =>
@@ -175,18 +176,24 @@ module.exports =
         @history.get(direction)
     return unless entry
 
+    savedHistory = false
     if direction is 'prev' and @history.isNewest()
-      @history.add
+      location =
+        type: 'prev'
         editor: editor
         point: editor.getCursorBufferPosition()
         URI: editor.getURI()
         setIndexToHead: false
-        debugTitle: "prev: Save head position"
+      @saveHistory(location, debugTitle: "Save head position")
+      savedHistory = true
 
     {URI, point} = entry
     if editor.getURI() is URI # Same pane.
       @landToPoint(editor, point)
-      @history.dump direction
+      if settings.get('debug') and not savedHistory
+        console.log "# cursor-history: #{direction}"
+        @history.dump()
+
     else # Jump to different pane
       options = searchAllPanes: settings.get('searchAllPanes')
       atom.workspace.open(URI, options).done (editor) =>
