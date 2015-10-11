@@ -47,8 +47,7 @@ class History
     else
       debug "URI not exist: #{entry.URI} or Buffer closed"
       _.remove(@entries, entry)
-      if direction is 'next'
-        @index -= 1
+      @index -= 1 if direction is 'next'
       @get(direction)
 
   # History concatenation mimicking Vim's way.
@@ -103,7 +102,7 @@ class History
   #    newMarker(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: ({editor, point, URI, setIndexToHead, dumpMessage}) ->
+  add: ({editor, point, URI, setIndexToHead, debugTitle}) ->
     current = @get()
     setIndexToHead ?= true
     newEntry = new Entry(editor, point, URI)
@@ -119,13 +118,10 @@ class History
       removed = @entries.splice(0, @entries.length - @max)
       e.destroy() for e in removed
 
-    if setIndexToHead
-      @index = @entries.length
-    else
-      @index = @entries.indexOf(current)
+    @index = if setIndexToHead then @entries.length else @entries.indexOf(current)
 
-    if dumpMessage?
-      @dump dumpMessage
+    if debugTitle?
+      @dump debugTitle
 
   clear: ->
     e.destroy() for e in @entries
