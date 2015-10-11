@@ -1,4 +1,8 @@
-## 0.5.0 - Improve, completely rewriten
+## 0.5.1 - Improve
+* Add delay to propery save symbols-view:go-to-declaration.
+* Don't debounce for cursor-history command dispatch.
+
+## 0.5.0 - Improve, completely rewritten
 * now use atom.commands.onWillDispatch/onDidDispatch
   instead of onDidChangeCursorPosition
 * No longer track renamed buffer, since its make things confuse

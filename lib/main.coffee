@@ -9,6 +9,7 @@ settings = require './settings'
   delay,
   debug,
   getLocation
+  # reportLocation
 } = require './utils'
 
 module.exports =
@@ -89,7 +90,8 @@ module.exports =
     handleBubble = ({target}) =>
       delay 100, =>
         return unless shouldSaveLocation(target)
-        @processLocationChange locationStack.pop()
+        if location = locationStack.pop()
+          @processLocationChange location
 
     # Mouse handling is not primal purpose of this package
     # I dont' use mouse basically while coding.
@@ -117,7 +119,6 @@ module.exports =
       'cursor-history:prev-within-editor',
     ]
     shouldSaveLocation = ({type, target}) ->
-      return false if type in ignoreCommands
       if (':' in type) and (editor = target.getModel?()) and editor.getURI?()
         true
       else
@@ -125,23 +126,27 @@ module.exports =
 
     locationStack = []
     subs = []
-
-    saveLocation = (event) ->
+    _saveLocation = (event) ->
       {type, target} = event
       return unless shouldSaveLocation({type, target})
-      debug "WillDispatch: #{type}"
+      # debug "WillDispatch: #{type}"
       locationStack.push getLocation(type, target.getModel())
+    saveLocation = _.debounce(_saveLocation, 100, true)
 
-    subs.push atom.commands.onWillDispatch _.debounce(saveLocation, 100, true)
+    subs.push atom.commands.onWillDispatch (event) ->
+      return if event.type in ignoreCommands
+      saveLocation(event)
 
     subs.push atom.commands.onDidDispatch (event) =>
       return if locationStack.length is 0
+      return if event.type in ignoreCommands
       {type, target} = event
       return unless shouldSaveLocation({type, target})
-      debug "DidDispatch: #{type}"
-      @processLocationChange locationStack.pop()
+      # debug "DidDispatch: #{type}"
+      delay 100, =>
+        if location = locationStack.pop()
+          @processLocationChange location
     subs
-
 
   processLocationChange: (oldLocation) ->
     {type} = oldLocation
