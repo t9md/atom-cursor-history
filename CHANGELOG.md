@@ -1,5 +1,5 @@
 ## 0.5.1 - Improve
-* Add delay to propery save symbols-view:go-to-declaration.
+* Add delay to properly save symbols-view:go-to-declaration.
 * Don't debounce for cursor-history command dispatch.
 
 ## 0.5.0 - Improve, completely rewritten
