@@ -30,6 +30,7 @@ module.exports =
       'cursor-history:next-within-editor': => @jump('next', true)
       'cursor-history:prev-within-editor': => @jump('prev', true)
       'cursor-history:clear': => @history.clear()
+      'cursor-history:index': => console.log @history.index
       'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
     subs = []
@@ -44,7 +45,6 @@ module.exports =
         when (oldURI isnt newURI)           then @saveHistory(oldLocation)
         when (oldPoint.row is newPoint.row) then return
         else
-          console.log [oldPoint.row, newPoint.row]
           if Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
             @saveHistory oldLocation, dumpMessage: "[Cursor moved] save history"
 
@@ -67,6 +67,15 @@ module.exports =
     @history = null
 
   observeCommands: ->
+    # workspaceElement = atom.views.getView(atom.workspace)
+    # workspaceElement.addEventListener 'mousedown', (e) =>
+    #   e = atom.workspace.getActiveTextEditor()
+    #   console.log 'down', e.getCursorBufferPosition().toString()
+    #
+    # workspaceElement.addEventListener 'mouseup', (e) =>
+    #   e = atom.workspace.getActiveTextEditor()
+    #   console.log 'up', e.getCursorBufferPosition().toString()
+
     ignoreCommands = [
       'cursor-history:next',
       'cursor-history:prev',
@@ -81,18 +90,19 @@ module.exports =
       else
         false
 
+
     locationStack = []
     subs = []
     subs.push atom.commands.onWillDispatch (event) ->
       {type, target} = event
       return unless shouldSaveLocation({type, target})
-      debug "WillDispatch: #{type}"
+      # debug "WillDispatch: #{type}"
       locationStack.push getLocation(type, target.getModel())
 
     subs.push atom.commands.onDidDispatch (event) =>
       {type, target} = event
       return unless shouldSaveLocation({type, target})
-      debug "DidDispatch: #{type}"
+      # debug "DidDispatch: #{type}"
       oldLocation = locationStack.pop()
       if target.hasFocus()
         newLocation = getLocation(type, target.getModel())

@@ -3,16 +3,14 @@ fs       = require 'fs'
 settings = require './settings'
 path = null
 
-# Wrapper class to wrap Point or Marker.
-# We can't call `editor::markBufferPosition` on destroyed editor.
-# So We need to use Point instead of Marker for destroyed editor.
-module.exports =
+# Wrapper for Point or Marker.
+#  For alive editor, we use marker to track updated position.
+#  For destroyed editor, we use simple point instead of marker.
 class Entry
   destroyed: false
   subscriptions: null
 
   constructor: (editor, @point, @URI) ->
-    # We need @editor only when editor.isAlive() to update @point.
     return unless editor.isAlive()
 
     @editor = editor
@@ -45,13 +43,9 @@ class Entry
 
   isValid: ->
     if settings.get('excludeClosedBuffer')
-      fs.existsSync(@URI) and @editor?.isAlive()
+      @editor?.isAlive() and fs.existsSync(@URI)
     else
       fs.existsSync @URI
-
-  inspect: ->
-    path ?= require 'path'
-    "#{@point}, #{path.basename(@URI)}"
 
   isAtSameRow: (otherEntry) ->
     {URI, point} = otherEntry
@@ -59,3 +53,9 @@ class Entry
       (URI is @URI) and (point.row is @point.row)
     else
       false
+
+  inspect: ->
+    path ?= require 'path'
+    "#{@point}, #{path.basename(@URI)}"
+
+module.exports = Entry

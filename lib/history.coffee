@@ -14,70 +14,42 @@ class History
     @index = 0
     @entries = []
 
-  clear: ->
-    e.destroy() for e in @entries
-    @init()
-
-  destroy: ->
-    e.destroy() for e in @entries
-    {@index, @entries} = {}
-
-  isOldest: ->
-    @isEmpty() or @index is 0
-
-  isNewest: ->
-    @isEmpty() or @index >= (@entries.length - 1)
-
-  isEmpty:  ->
-    @entries.length is 0
+  isEmpty:  -> @entries.length is 0
+  isOldest: -> @isEmpty() or @index is 0
+  isNewest: -> @isEmpty() or @index >= (@entries.length - 1)
 
   rename: (oldURI, newURI) ->
-    for e in @entries when e.URI is oldURI
-      e.setURI(newURI)
+    e.setURI(newURI) for e in @entries when e.URI is oldURI
+
+  isValidIndex: (index) ->
+    0 <= index <= (@entries.length - 1)
 
   get: (direction='current', {URI}={}) ->
     if URI?
+      current = @get() # save current entry
       while entry = @get(direction)
         return entry if (entry.URI is URI)
-      null
-    switch direction
-      when 'next'
-        if @isNewest()
-          @dump "Newest"
-          return
-        @getValid direction
-      when 'prev'
-        if @isOldest()
-          @dump "Oldest"
-          return
-        @getValid direction
-      when 'current'
-        @entries[@index]
+      # restore index since not found.
+      @index = @entries.indexOf(current)
+      return null
 
-  getValid: (direction) ->
-    until @isEmpty()
-      switch direction
-        when 'next'
-          break if @isNewest()
-          @index += 1
-        when 'prev'
-          break if @isOldest()
-          @index -= 1
+    index = switch direction
+      when 'next' then @index + 1
+      when 'prev' then @index - 1
+      else  @index
 
-      entry = @get()
-      return entry if entry.isValid()
+    return null unless @isValidIndex(index)
 
+    @index = index
+    entry = @entries[index]
+    if entry.isValid()
+      return entry
+    else
       debug "URI not exist: #{entry.URI} or Buffer closed"
-      @remove(@index)
+      _.remove(@entries, entry)
       if direction is 'next'
         @index -= 1
-
-  remove: (index, count=1) ->
-    entries = @entries.splice(index, count)
-    for e in entries
-      debug "  Destroy: #{e.inspect()}"
-      e.destroy()
-    entries
+      @get(direction)
 
   # History concatenation mimicking Vim's way.
   # newMarker(=old position from where you jump to land here) is
@@ -132,26 +104,36 @@ class History
   #    No special @index adjustment.
   #
   add: ({editor, point, URI, setIndexToHead, dumpMessage}) ->
+    current = @get()
     setIndexToHead ?= true
     newEntry = new Entry(editor, point, URI)
 
-    for entry, i in @entries
-      if entry.isAtSameRow newEntry
-        entry.destroy()
-        # adjust @index for deletion.
-        @index -= 1 if i <= @index
+    entriesRemove = (e for e in @entries when e.isAtSameRow(newEntry))
+    for e in entriesRemove
+      e.destroy()
+      _.remove(@entries, e)
 
-    @entries = _.reject @entries, (entry) -> entry.isDestroyed()
     @entries.push newEntry
 
     if @entries.length > @max
-      @remove 0, (@entries.length - @max)
+      removed = @entries.splice(0, @entries.length - @max)
+      e.destroy() for e in removed
 
     if setIndexToHead
       @index = @entries.length
+    else
+      @index = @entries.indexOf(current)
 
     if dumpMessage?
       @dump dumpMessage
+
+  clear: ->
+    e.destroy() for e in @entries
+    @init()
+
+  destroy: ->
+    e.destroy() for e in @entries
+    {@index, @entries} = {}
 
   dump: (msg, force=false) ->
     unless force or settings.get('debug')
