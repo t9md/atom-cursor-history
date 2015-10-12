@@ -1,3 +1,8 @@
+## 0.5.2 - Improve
+* Refactoring
+* Minor bugfix
+* Improve: efficient and safe removal of ivalid/destroyed entry.
+
 ## 0.5.1 - Improve
 * Add delay to properly save symbols-view:go-to-declaration.
 * Don't debounce for cursor-history command dispatch.
