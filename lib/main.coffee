@@ -20,7 +20,7 @@ module.exports =
 
   activate: ->
     @subscriptions = new CompositeDisposable
-    @editorSubscriptions = {}
+    @editorSubscriptions = new CompositeDisposable
     @history = new History(settings.get('max'))
     @emitter = new Emitter
 
@@ -65,11 +65,10 @@ module.exports =
     @emitter.on 'did-change-location', fn
 
   deactivate: ->
-    for editorID, subs of @editorSubscriptions
-      subs.dispose()
-    @editorSubscriptions = null
     @subscriptions.dispose()
     @subscriptions = null
+    @editorSubscriptions.dispose()
+    @editorSubscriptions = null
     settings.dispose()
     @history?.destroy()
     @history = null
@@ -162,11 +161,11 @@ module.exports =
   observeTextEditors: ->
     atom.workspace.observeTextEditors (editor) =>
       return unless editor.getURI()
-      @editorSubscriptions[editor.id] = subs = new CompositeDisposable
 
-      subs.add editor.onDidDestroy =>
-        subs.dispose()
-        delete @editorSubscriptions[editor.id]
+      disposable = editor.onDidDestroy =>
+        disposable.dispose()
+        @editorSubscriptions.remove(disposable)
+      @editorSubscriptions.add(disposable)
 
   jump: (direction, withinEditor=false) ->
     return unless editor = atom.workspace.getActiveTextEditor()
