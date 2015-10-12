@@ -54,8 +54,9 @@ module.exports =
   needRemember: (oldPoint, newPoint) ->
     Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
 
-  saveHistory: (location, {debugTitle}={}) ->
-    @history.add location
+  saveHistory: (location, options={}) ->
+    {debugTitle, setIndexToHead}=options
+    @history.add location, options
     if settings.get('debug')
       console.log "# cursor-history: #{debugTitle} [#{location.type}]"
       @history.dump()
@@ -180,13 +181,14 @@ module.exports =
     location = null
     if direction is 'prev' and @history.isNewest()
       location = getLocation('prev', editor)
-      location.setIndexToHead = false
 
     task = =>
       # Since in the process of @saveHistory(), entry might be removed.
       # so saving after landing is safer and no complication in my brain.
       if location?
-        @saveHistory(location, debugTitle: "Save head position")
+        @saveHistory location,
+          setIndexToHead: false
+          ebugTitle: "Save head position"
 
       if settings.get('debug') and not location?
         console.log "# cursor-history: #{direction}"

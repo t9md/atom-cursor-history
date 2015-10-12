@@ -38,15 +38,13 @@ class History
 
     return null unless @isValidIndex(index)
 
-    @index = index
-    entry = @entries[index]
-    if entry.isValid()
-      return entry
-    else
-      debug "URI not exist: #{entry.URI} or Buffer closed"
-      _.remove(@entries, entry)
-      @index -= 1 if direction is 'next'
-      @get(direction)
+    entry = @entries[@index=index]
+    return entry if entry.isValid()
+
+    debug "URI not exist: #{entry.URI} or Buffer closed"
+    _.remove(@entries, entry)
+    @index -= 1 if direction is 'next'
+    @get(direction)
 
   # History concatenation mimicking Vim's way.
   # newMarker(=old position from where you jump to land here) is
@@ -100,7 +98,8 @@ class History
   #    newMarker(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: ({editor, point, URI, setIndexToHead}) ->
+  add: (location, {setIndexToHead}={}) ->
+    {editor, point, URI} = location
     setIndexToHead ?= true
     newEntry = new Entry(editor, point, URI)
     for e, i in @entries when e.isAtSameRow(newEntry)
