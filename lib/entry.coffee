@@ -43,6 +43,8 @@ class Entry
   setURI: (@URI) ->
 
   isValid: ->
+    return false if @isDestroyed()
+
     if settings.get('excludeClosedBuffer')
       @editor?.isAlive() and fs.existsSync(@URI)
     else
@@ -56,6 +58,8 @@ class Entry
 
   inspect: ->
     path ?= require 'path'
-    "#{@point}, #{path.basename(@URI)}"
+    s = "#{@point}, #{path.basename(@URI)}"
+    s += ' [invalid]' unless @isValid()
+    s
 
 module.exports = Entry

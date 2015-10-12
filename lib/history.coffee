@@ -1,4 +1,4 @@
-# Refactoring status: 80%
+# Refactoring status: 95%
 _ = require 'underscore-plus'
 Entry = require './entry'
 {debug} = require './utils'
@@ -23,30 +23,27 @@ class History
   isValidIndex: (index) ->
     0 <= index <= (@entries.length - 1)
 
-  get: (direction='current', {URI}={}) ->
-    if URI?
-      current = @get() # save current entry
-      while entry = @get(direction)
-        return entry if (entry.URI is URI)
-      # restore index since not found.
-      @index = @entries.indexOf(current)
-      return null
+  findIndex: (direction, URI=null) ->
+    switch direction
+      when 'next'
+        start = @index + 1
+        indexes = [start..(@entries.length-1)]
+      when 'prev'
+        start = @index - 1
+        indexes = [start..0]
+    return null unless @isValidIndex(start)
 
-    index = switch direction
-      when 'next'    then @index + 1
-      when 'prev'    then @index - 1
-      when 'current' then @index
+    for index in indexes
+      entry = @entries[index]
+      if URI?
+        return index if entry.isValid() and (entry.URI is URI)
+      else
+        return index if entry.isValid()
 
-    return null unless @isValidIndex(index)
-
-    entry = @entries[@index=index]
-    return entry if entry.isValid()
-
-    debug "URI not exist: #{entry.URI} or Buffer closed"
-    entry.destroy()
-    _.remove(@entries, entry)
-    @index -= 1 if direction is 'next'
-    @get(direction)
+  get: (direction, {URI}={}) ->
+    index = @findIndex(direction, URI)
+    if index?
+      @entries[@index=index]
 
   # History concatenation mimicking Vim's way.
   # newMarker(=old position from where you jump to land here) is
@@ -106,14 +103,15 @@ class History
     newEntry = new Entry(editor, point, URI)
     for e, i in @entries when e.isAtSameRow(newEntry)
       e.destroy()
-      @index -= 1 if i < @index # adjust @index for deletion.
-    @entries = _.reject @entries, (e) -> e.isDestroyed()
     @entries.push newEntry
 
-    if @entries.length > @max
-      removed = @entries.splice(0, @entries.length - @max)
-      e.destroy() for e in removed
     if setIndexToHead
+      # when setIndexToHead is true, we can safely remove @entries
+      # without doing confusing index adjustment.
+      @entries = (e for e in @entries when e.isValid())
+      if @entries.length > @max
+        removed = @entries.splice(0, @entries.length - @max)
+        e.destroy() for e in removed
       @index = @entries.length
 
   clear: ->

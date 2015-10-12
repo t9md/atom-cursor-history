@@ -1,3 +1,4 @@
+# Refactoring Status: 90%
 {CompositeDisposable, Disposable, TextEditor, Emitter} = require 'atom'
 _ = require 'underscore-plus'
 path = require 'path'
@@ -157,11 +158,8 @@ module.exports =
 
   jump: (direction, withinEditor=false) ->
     return unless editor = atom.workspace.getActiveTextEditor()
-    entry =
-      if withinEditor
-        @history.get(direction, URI: editor.getURI())
-      else
-        @history.get(direction)
+    forURI = if withinEditor then editor.getURI() else null
+    entry = @history.get(direction, URI: forURI)
     return unless entry
     {URI, point} = entry
 
