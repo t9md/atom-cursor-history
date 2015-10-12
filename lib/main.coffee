@@ -16,11 +16,9 @@ module.exports =
   config: settings.config
   history: null
   subscriptions: null
-  editorSubscriptions: null
 
   activate: ->
     @subscriptions = new CompositeDisposable
-    @editorSubscriptions = new CompositeDisposable
     @history = new History(settings.get('max'))
     @emitter = new Emitter
 
@@ -67,8 +65,6 @@ module.exports =
   deactivate: ->
     @subscriptions.dispose()
     @subscriptions = null
-    @editorSubscriptions.dispose()
-    @editorSubscriptions = null
     settings.dispose()
     @history?.destroy()
     @history = null
@@ -83,8 +79,8 @@ module.exports =
 
     handleCapture = ({target}) ->
       return unless shouldSaveLocation(target)
-      activeEditor = atom.workspace.getActiveTextEditor()
-      oldLocation = getLocation('mousedown', activeEditor)
+      return unless editor = atom.workspace.getActiveTextEditor()
+      oldLocation = getLocation('mousedown', editor)
       locationStack.push oldLocation
 
     handleBubble = ({target}) =>
@@ -164,8 +160,8 @@ module.exports =
 
       disposable = editor.onDidDestroy =>
         disposable.dispose()
-        @editorSubscriptions.remove(disposable)
-      @editorSubscriptions.add(disposable)
+        @subscriptions.remove(disposable)
+      @subscriptions.add(disposable)
 
   jump: (direction, withinEditor=false) ->
     return unless editor = atom.workspace.getActiveTextEditor()
