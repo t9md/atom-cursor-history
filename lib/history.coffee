@@ -1,4 +1,4 @@
-# Refactoring status: 95%
+# Refactoring status: 100s%
 _ = require 'underscore-plus'
 Entry = require './entry'
 {debug} = require './utils'
