@@ -1,3 +1,4 @@
+# Refactoring status: 100%
 {CompositeDisposable} = require 'atom'
 fs       = require 'fs'
 settings = require './settings'
@@ -47,8 +48,7 @@ class Entry
     else
       fs.existsSync @URI
 
-  isAtSameRow: (otherEntry) ->
-    {URI, point} = otherEntry
+  isAtSameRow: ({URI, point}) ->
     if point? and @point?
       (URI is @URI) and (point.row is @point.row)
     else

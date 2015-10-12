@@ -1,3 +1,4 @@
+# Refactoring status: 80%
 _ = require 'underscore-plus'
 Entry = require './entry'
 {debug} = require './utils'
@@ -32,9 +33,9 @@ class History
       return null
 
     index = switch direction
-      when 'next' then @index + 1
-      when 'prev' then @index - 1
-      else  @index
+      when 'next'    then @index + 1
+      when 'prev'    then @index - 1
+      when 'current' then @index
 
     return null unless @isValidIndex(index)
 
@@ -42,6 +43,7 @@ class History
     return entry if entry.isValid()
 
     debug "URI not exist: #{entry.URI} or Buffer closed"
+    entry.destroy()
     _.remove(@entries, entry)
     @index -= 1 if direction is 'next'
     @get(direction)

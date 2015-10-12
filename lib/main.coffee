@@ -37,17 +37,9 @@ module.exports =
 
     @subscriptions.add(_.flatten(subs)...)
 
-    @onDidChangeLocation ({type, oldLocation, newLocation}) =>
-      {point: oldPoint, URI: oldURI} = oldLocation
-      {point: newPoint, URI: newURI} = newLocation
-      switch
-        when (oldURI isnt newURI)
-          @saveHistory(oldLocation, debugTitle: "URI changed")
-        when (oldPoint.row is newPoint.row)
-          return
-        else
-          if @needRemember(oldPoint, newPoint)
-            @saveHistory oldLocation, debugTitle: "Cursor moved"
+    @onDidChangeLocation ({oldLocation, newLocation}) =>
+      if @needRemember(oldLocation.point, newLocation.point)
+        @saveHistory oldLocation, debugTitle: "Cursor moved"
 
   needRemember: (oldPoint, newPoint) ->
     Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
@@ -150,7 +142,7 @@ module.exports =
     editorElement = atom.views.getView(editor)
     if editorElement.hasFocus() and (editor.getURI() is oldLocation.URI)
       newLocation = getLocation(type, editor)
-      @emitter.emit 'did-change-location', {type, oldLocation, newLocation}
+      @emitter.emit 'did-change-location', {oldLocation, newLocation}
     else
       @saveHistory(oldLocation, debugTitle: "Save on focus lost")
 
@@ -183,16 +175,16 @@ module.exports =
       if location?
         @saveHistory location,
           setIndexToHead: false
-          ebugTitle: "Save head position"
+          debugTitle: "Save head position"
 
       if settings.get('debug') and not location?
         console.log "# cursor-history: #{direction}"
         @history.dump()
 
-    if editor.getURI() is URI # Same pane.
+    if editor.getURI() is URI
       @landToPoint(editor, point)
       task()
-    else # Jump to different pane
+    else
       searchAllPanes = settings.get('searchAllPanes')
       atom.workspace.open(URI, {searchAllPanes}).done (editor) =>
         @landToPoint(editor, point)
