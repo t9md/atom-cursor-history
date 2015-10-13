@@ -33,7 +33,6 @@ module.exports =
 
     subs = []
     subs.push @observeMouse()
-    subs.push @observeTextEditors()
     subs.push @observeCommands()
 
     @subscriptions.add(_.flatten(subs)...)
@@ -45,9 +44,8 @@ module.exports =
   needRemember: (oldPoint, newPoint) ->
     Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
 
-  saveHistory: (location, options={}) ->
-    {debugTitle, setIndexToHead}=options
-    @history.add location, options
+  saveHistory: (location, {debugTitle, setIndexToHead}={}) ->
+    @history.add location, {setIndexToHead}
     if settings.get('debug')
       console.log "# cursor-history: #{debugTitle} [#{location.type}]"
       @history.dump()
@@ -147,15 +145,6 @@ module.exports =
     else
       @saveHistory(oldLocation, debugTitle: "Save on focus lost")
 
-  observeTextEditors: ->
-    atom.workspace.observeTextEditors (editor) =>
-      return unless editor.getURI()
-
-      disposable = editor.onDidDestroy =>
-        disposable.dispose()
-        @subscriptions.remove(disposable)
-      @subscriptions.add(disposable)
-
   jump: (direction, withinEditor=false) ->
     return unless editor = atom.workspace.getActiveTextEditor()
     forURI = if withinEditor then editor.getURI() else null
@@ -166,27 +155,23 @@ module.exports =
     location = null
     if direction is 'prev' and @history.isNewest()
       location = getLocation('prev', editor)
+      @saveHistory location,
+        setIndexToHead: false
+        debugTitle: "Save head position"
 
-    task = =>
-      # Since in the process of @saveHistory(), entry might be removed.
-      # so saving after landing is safer and no complication in my brain.
-      if location?
-        @saveHistory location,
-          setIndexToHead: false
-          debugTitle: "Save head position"
-
+    debugLog = =>
       if settings.get('debug') and not location?
         console.log "# cursor-history: #{direction}"
         @history.dump()
 
     if editor.getURI() is URI
       @landToPoint(editor, point)
-      task()
+      debugLog()
     else
       searchAllPanes = settings.get('searchAllPanes')
       atom.workspace.open(URI, {searchAllPanes}).done (editor) =>
         @landToPoint(editor, point)
-        task()
+        debugLog()
 
   landToPoint: (editor, point) ->
     editor.scrollToBufferPosition(point, center: true)

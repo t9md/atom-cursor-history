@@ -1,3 +1,6 @@
+## 0.5.3 - Improve
+* Minor refactoring
+
 ## 0.5.2 - Improve
 * Refactoring
 * Minor bugfix

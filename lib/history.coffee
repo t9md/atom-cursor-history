@@ -97,8 +97,7 @@ class History
   #    newMarker(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: (location, {setIndexToHead}={}) ->
-    {editor, point, URI} = location
+  add: ({editor, point, URI}, {setIndexToHead}={}) ->
     setIndexToHead ?= true
     newEntry = new Entry(editor, point, URI)
     for e, i in @entries when e.isAtSameRow(newEntry)
@@ -108,6 +107,7 @@ class History
     if setIndexToHead
       # when setIndexToHead is true, we can safely remove @entries
       # without doing confusing index adjustment.
+      e.destroy() for e in @entries when not e.isValid()
       @entries = (e for e in @entries when e.isValid())
       if @entries.length > @max
         removed = @entries.splice(0, @entries.length - @max)
