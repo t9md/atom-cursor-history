@@ -56,26 +56,20 @@ module.exports =
 
   observeMouse: ->
     locationStack = []
-    shouldSaveLocation = (target) ->
-      if (editor = target.getModel?()) and editor.getURI?()
-        true
-      else
-        false
-
     handleCapture = ({target}) ->
-      return unless shouldSaveLocation(target)
+      return unless target.getModel?()?.getURI?()?
       return unless editor = atom.workspace.getActiveTextEditor()
       locationStack.push getLocation('mousedown', editor)
 
     handleBubble = ({target}) =>
+      return unless target.getModel?()?.getURI?()?
       delay 100, =>
-        return unless shouldSaveLocation(target)
         @checkLocationChange(locationStack.pop()) if locationStack.length
 
     # Mouse handling is not primal purpose of this package
     # I dont' use mouse basically while coding.
     # So keep codebase minimal and simple,
-    #  I won't use editor::onDidChangeCursorPosition() to track
+    #  I don't use editor::onDidChangeCursorPosition() to track
     #  cursor position change caused by mouse click.
 
     # When mouse clicked, cursor position is updated by atom core using setCursorScreenPosition()
@@ -99,10 +93,7 @@ module.exports =
       'cursor-history:clear',
     ]
     shouldSaveLocation = (type, target) ->
-      if (':' in type) and (editor = target.getModel?()) and editor.getURI?()
-        true
-      else
-        false
+      (':' in type) and target.getModel?()?.getURI?()?
 
     locationStack = []
     saveLocation = _.debounce (type, target) ->
@@ -116,8 +107,8 @@ module.exports =
       saveLocation(type, target)
 
     @subscriptions.add atom.commands.onDidDispatch ({type, target}) =>
-      return if locationStack.length is 0
       return if type in ignoreCommands
+      return if locationStack.length is 0
       return unless shouldSaveLocation(type, target)
       # debug "DidDispatch: #{type}"
       delay 100, =>
@@ -136,7 +127,7 @@ module.exports =
   jump: (direction, withinEditor=false) ->
     return unless editor = atom.workspace.getActiveTextEditor()
     forURI = if withinEditor then editor.getURI() else null
-    needToSave = direction is 'prev' and @history.isIndexAtHead()
+    needToSave = (direction is 'prev') and @history.isIndexAtHead()
     unless entry = @history.get(direction, URI: forURI)
       return
 
