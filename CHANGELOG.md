@@ -1,5 +1,5 @@
 ## 0.5.4 - [not released yet]
-* Refactoring
+* Refactoring complete!
 
 ## 0.5.3 - Improve
 * Minor refactoring
