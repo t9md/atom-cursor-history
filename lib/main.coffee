@@ -56,10 +56,10 @@ module.exports =
 
   observeMouse: ->
     locationStack = []
-    handleCapture = ({target}) ->
+    handleCapture = ({target}) =>
       return unless target.getModel?()?.getURI?()?
       return unless editor = atom.workspace.getActiveTextEditor()
-      locationStack.push getLocation('mousedown', editor)
+      locationStack.push @getLocation('mousedown', editor)
 
     handleBubble = ({target}) =>
       return unless target.getModel?()?.getURI?()?
@@ -96,10 +96,10 @@ module.exports =
       (':' in type) and target.getModel?()?.getURI?()?
 
     locationStack = []
-    saveLocation = _.debounce (type, target) ->
+    saveLocation = _.debounce (type, target) =>
       return unless shouldSaveLocation(type, target)
       # debug "WillDispatch: #{type}"
-      locationStack.push getLocation(type, target.getModel())
+      locationStack.push @getLocation(type, target.getModel())
     , 100, true
 
     @subscriptions.add atom.commands.onWillDispatch ({type, target}) ->
@@ -119,7 +119,7 @@ module.exports =
     return unless editor = atom.workspace.getActiveTextEditor()
     editorElement = atom.views.getView(editor)
     if editorElement.hasFocus() and (editor.getURI() is URI)
-      newLocation = getLocation(type, editor)
+      newLocation = @getLocation(type, editor)
       @emitter.emit 'did-change-location', {oldLocation, newLocation}
     else
       @saveHistory oldLocation, subject: "Save on focus lost"
@@ -130,18 +130,21 @@ module.exports =
     needToSave = (direction is 'prev') and @history.isIndexAtHead()
     unless entry = @history.get(direction, URI: forURI)
       return
+    # FIXME, Explicitly preserve point, URI by setting independent value,
+    # since its might be set null if entry.isAtSameRow()
+    {point, URI} = entry
 
     if needToSave
-      @saveHistory getLocation('prev', editor),
+      @saveHistory @getLocation('prev', editor),
         setIndexToHead: false
         subject: "Save head position"
 
-    options = {point: entry.point, direction, log: not needToSave}
-    if editor.getURI() is entry.URI
+    options = {point, direction, log: not needToSave}
+    if editor.getURI() is URI
       @land(editor, options)
     else
       searchAllPanes = settings.get('searchAllPanes')
-      atom.workspace.open(entry.URI, {searchAllPanes}).done (editor) =>
+      atom.workspace.open(URI, {searchAllPanes}).done (editor) =>
         @land(editor, options)
 
   land: (editor, {point, direction, log}) ->
@@ -151,6 +154,11 @@ module.exports =
 
     if settings.get('debug') and log
       @logHistory(direction)
+
+  getLocation: (type, editor) ->
+    point = editor.getCursorBufferPosition()
+    URI   = editor.getURI()
+    {editor, point, URI, type}
 
   logHistory: (msg) ->
     s = """
