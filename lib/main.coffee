@@ -10,7 +10,6 @@ settings = require './settings'
   delay,
   debug,
   getLocation
-  # reportLocation
 } = require './utils'
 
 module.exports =
@@ -20,7 +19,7 @@ module.exports =
 
   activate: ->
     @subscriptions = new CompositeDisposable
-    @history = new History(settings.get('max'))
+    @history = new History
     @emitter = new Emitter
 
     atom.commands.add 'atom-workspace',
@@ -31,24 +30,20 @@ module.exports =
       'cursor-history:clear': => @history.clear()
       'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
-    subs = []
-    subs.push @observeMouse()
-    subs.push @observeCommands()
-
-    @subscriptions.add(_.flatten(subs)...)
+    @observeMouse()
+    @observeCommands()
 
     @onDidChangeLocation ({oldLocation, newLocation}) =>
       if @needRemember(oldLocation.point, newLocation.point)
-        @saveHistory oldLocation, debugTitle: "Cursor moved"
+        @saveHistory oldLocation, subject: "Cursor moved"
 
   needRemember: (oldPoint, newPoint) ->
     Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
 
-  saveHistory: (location, {debugTitle, setIndexToHead}={}) ->
+  saveHistory: (location, {subject, setIndexToHead}={}) ->
     @history.add location, {setIndexToHead}
     if settings.get('debug')
-      console.log "# cursor-history: #{debugTitle} [#{location.type}]"
-      @history.dump()
+      @logHistory "#{subject} [#{location.type}]"
 
   onDidChangeLocation: (fn) ->
     @emitter.on 'did-change-location', fn
@@ -56,7 +51,6 @@ module.exports =
   deactivate: ->
     @subscriptions.dispose()
     @subscriptions = null
-    settings.dispose()
     @history?.destroy()
     @history = null
 
@@ -71,14 +65,12 @@ module.exports =
     handleCapture = ({target}) ->
       return unless shouldSaveLocation(target)
       return unless editor = atom.workspace.getActiveTextEditor()
-      oldLocation = getLocation('mousedown', editor)
-      locationStack.push oldLocation
+      locationStack.push getLocation('mousedown', editor)
 
     handleBubble = ({target}) =>
       delay 100, =>
         return unless shouldSaveLocation(target)
-        if location = locationStack.pop()
-          @processLocationChange location
+        @checkLocationChange(locationStack.pop()) if locationStack.length
 
     # Mouse handling is not primal purpose of this package
     # I dont' use mouse basically while coding.
@@ -94,7 +86,7 @@ module.exports =
     workspaceElement.addEventListener 'mousedown', handleCapture, true
     workspaceElement.addEventListener 'mousedown', handleBubble, false
 
-    new Disposable ->
+    @subscriptions.add new Disposable ->
       workspaceElement.removeEventListener 'mousedown', handleCapture, true
       workspaceElement.removeEventListener 'mousedown', handleBubble, false
 
@@ -104,76 +96,74 @@ module.exports =
       'cursor-history:prev',
       'cursor-history:next-within-editor',
       'cursor-history:prev-within-editor',
+      'cursor-history:clear',
     ]
-    shouldSaveLocation = ({type, target}) ->
+    shouldSaveLocation = (type, target) ->
       if (':' in type) and (editor = target.getModel?()) and editor.getURI?()
         true
       else
         false
 
     locationStack = []
-    subs = []
-    _saveLocation = (event) ->
-      {type, target} = event
-      return unless shouldSaveLocation({type, target})
+    saveLocation = _.debounce (type, target) ->
+      return unless shouldSaveLocation(type, target)
       # debug "WillDispatch: #{type}"
       locationStack.push getLocation(type, target.getModel())
-    saveLocation = _.debounce(_saveLocation, 100, true)
+    , 100, true
 
-    subs.push atom.commands.onWillDispatch (event) ->
-      return if event.type in ignoreCommands
-      saveLocation(event)
+    @subscriptions.add atom.commands.onWillDispatch ({type, target}) ->
+      return if type in ignoreCommands
+      saveLocation(type, target)
 
-    subs.push atom.commands.onDidDispatch (event) =>
+    @subscriptions.add atom.commands.onDidDispatch ({type, target}) =>
       return if locationStack.length is 0
-      return if event.type in ignoreCommands
-      {type, target} = event
-      return unless shouldSaveLocation({type, target})
+      return if type in ignoreCommands
+      return unless shouldSaveLocation(type, target)
       # debug "DidDispatch: #{type}"
       delay 100, =>
-        if location = locationStack.pop()
-          @processLocationChange location
-    subs
+        @checkLocationChange(locationStack.pop()) if locationStack.length
 
-  processLocationChange: (oldLocation) ->
-    {type} = oldLocation
+  checkLocationChange: (oldLocation) ->
+    {type, URI} = oldLocation
     return unless editor = atom.workspace.getActiveTextEditor()
     editorElement = atom.views.getView(editor)
-    if editorElement.hasFocus() and (editor.getURI() is oldLocation.URI)
+    if editorElement.hasFocus() and (editor.getURI() is URI)
       newLocation = getLocation(type, editor)
       @emitter.emit 'did-change-location', {oldLocation, newLocation}
     else
-      @saveHistory(oldLocation, debugTitle: "Save on focus lost")
+      @saveHistory oldLocation, subject: "Save on focus lost"
 
   jump: (direction, withinEditor=false) ->
     return unless editor = atom.workspace.getActiveTextEditor()
     forURI = if withinEditor then editor.getURI() else null
-    entry = @history.get(direction, URI: forURI)
-    return unless entry
-    {URI, point} = entry
+    needToSave = direction is 'prev' and @history.isIndexAtHead()
+    unless entry = @history.get(direction, URI: forURI)
+      return
 
-    location = null
-    if direction is 'prev' and @history.isNewest()
-      location = getLocation('prev', editor)
-      @saveHistory location,
+    if needToSave
+      @saveHistory getLocation('prev', editor),
         setIndexToHead: false
-        debugTitle: "Save head position"
+        subject: "Save head position"
 
-    debugLog = =>
-      if settings.get('debug') and not location?
-        console.log "# cursor-history: #{direction}"
-        @history.dump()
-
-    if editor.getURI() is URI
-      @landToPoint(editor, point)
-      debugLog()
+    options = {point: entry.point, direction, log: not needToSave}
+    if editor.getURI() is entry.URI
+      @land(editor, options)
     else
       searchAllPanes = settings.get('searchAllPanes')
-      atom.workspace.open(URI, {searchAllPanes}).done (editor) =>
-        @landToPoint(editor, point)
-        debugLog()
+      atom.workspace.open(entry.URI, {searchAllPanes}).done (editor) =>
+        @land(editor, options)
 
-  landToPoint: (editor, point) ->
+  land: (editor, {point, direction, log}) ->
     editor.scrollToBufferPosition(point, center: true)
     editor.setCursorBufferPosition(point)
     Flasher.flash() if settings.get('flashOnLand')
+
+    if settings.get('debug') and log
+      @logHistory(direction)
+
+  logHistory: (msg) ->
+    s = """
+    # cursor-history: #{msg}
+    #{@history.inspect()}
+    """
+    console.log s, "\n\n"

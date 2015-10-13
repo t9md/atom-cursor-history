@@ -2,43 +2,45 @@
 _ = require 'underscore-plus'
 Entry = require './entry'
 {debug} = require './utils'
+settings = require './settings'
 
 class History
   entries: []
   index: 0
 
-  constructor: (@max) ->
+  constructor: ->
     @init()
 
   init: ->
     @index = 0
     @entries = []
 
-  isEmpty: ->
-    @entries.length is 0
+  clear: ->
+    e.destroy() for e in @entries
+    @init()
 
-  isNewest: ->
-    @isEmpty() or @index >= (@entries.length - 1)
+  destroy: ->
+    e.destroy() for e in @entries
+    {@index, @entries} = {}
 
-  isValidIndex: (index) ->
-    0 <= index <= (@entries.length - 1)
+  isIndexAtHead: ->
+    @index is @entries.length
 
   findIndex: (direction, URI=null) ->
-    switch direction
-      when 'next'
-        start = @index + 1
-        indexes = [start..(@entries.length-1)]
-      when 'prev'
-        start = @index - 1
-        indexes = [start..0]
-    return null unless @isValidIndex(start)
+    [start, indexes] = switch direction
+      when 'next' then [start=(@index + 1), [start..(@entries.length-1)]]
+      when 'prev' then [start=(@index - 1), [start..0]]
+
+    # Check if valid index range
+    return null unless (0 <= start <= (@entries.length - 1))
 
     for index in indexes
       entry = @entries[index]
+      continue unless entry.isValid()
       if URI?
-        return index if entry.isValid() and (entry.URI is URI)
+        return index if (entry.URI is URI)
       else
-        return index if entry.isValid()
+        return index
 
   get: (direction, {URI}={}) ->
     index = @findIndex(direction, URI)
@@ -105,29 +107,27 @@ class History
     @entries.push newEntry
 
     if setIndexToHead
-      # when setIndexToHead is true, we can safely remove @entries
-      # without doing confusing index adjustment.
-      e.destroy() for e in @entries when not e.isValid()
-      @entries = (e for e in @entries when e.isValid())
-      if @entries.length > @max
-        removed = @entries.splice(0, @entries.length - @max)
-        e.destroy() for e in removed
+      # Only when setIndexToHead is true, we can safely remove @entries.
+      @removeEntries()
       @index = @entries.length
 
-  clear: ->
-    e.destroy() for e in @entries
-    @init()
+  removeEntries: ->
+    # Scrub invalid
+    e.destroy() for e in @entries when not e.isValid()
+    @entries = (e for e in @entries when e.isValid())
 
-  destroy: ->
-    e.destroy() for e in @entries
-    {@index, @entries} = {}
+    # Remove if exceeds max
+    removeCount = @entries.length - settings.get('max')
+    if removeCount > 0
+      removed = @entries.splice(0, removeCount)
+      e.destroy() for e in removed
 
-  dump: (msg) ->
-    ary = []
-    for e, i in @entries
-      s = if i is @index then "> " else "  "
-      ary.push "#{s}#{i}: #{e.inspect()}"
+  inspect: (msg) ->
+    ary =
+      for e, i in @entries
+        s = if (i is @index) then "> " else "  "
+        "#{s}#{i}: #{e.inspect()}"
     ary.push "> #{@index}:" if (@index is @entries.length)
-    console.log ary.join("\n") + "\n\n"
+    ary.join("\n")
 
 module.exports = History

@@ -5,8 +5,8 @@ settings = require './settings'
 path = null
 
 # Wrapper for Point or Marker.
-#  For alive editor, we use marker to track updated position.
-#  For destroyed editor, we use simple point instead of marker.
+#  For alive editor, use marker to track up to date position.
+#  For destroyed editor, use point.
 class Entry
   destroyed: false
   subscriptions: null
@@ -25,15 +25,15 @@ class Entry
 
     @subscriptions.add @editor.onDidDestroy =>
       marker.destroy()
-      @releaseEditor()
+      @unSubscribe()
 
-  releaseEditor: ->
+  unSubscribe: ->
     @editor = null
     @subscriptions.dispose()
     @subscriptions = null
 
   destroy: ->
-    @releaseEditor() if @editor?.isAlive()
+    @unSubscribe() if @editor?.isAlive()
     @destroyed = true
     {@point, @URI} = {}
 
