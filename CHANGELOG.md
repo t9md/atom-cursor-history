@@ -1,5 +1,6 @@
 ## 0.5.4 - [not released yet]
-* Refactoring complete!
+* Refactoring.
+* Add ignoreCommands setting parameter.
 
 ## 0.5.3 - Improve
 * Minor refactoring

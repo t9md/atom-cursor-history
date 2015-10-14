@@ -6,11 +6,15 @@ path = require 'path'
 History  = require './history'
 Flasher  = require './flasher'
 settings = require './settings'
-{
-  delay,
-  debug,
-  getLocation
-} = require './utils'
+{delay, debug} = require './utils'
+
+ignoreCommands = [
+  'cursor-history:next',
+  'cursor-history:prev',
+  'cursor-history:next-within-editor',
+  'cursor-history:prev-within-editor',
+  'cursor-history:clear',
+]
 
 module.exports =
   config: settings.config
@@ -37,6 +41,15 @@ module.exports =
       if @needRemember(oldLocation.point, newLocation.point)
         @saveHistory oldLocation, subject: "Cursor moved"
 
+  deactivate: ->
+    @subscriptions.dispose()
+    @subscriptions = null
+    @history?.destroy()
+    @history = null
+
+  onDidChangeLocation: (fn) ->
+    @emitter.on 'did-change-location', fn
+
   needRemember: (oldPoint, newPoint) ->
     Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
 
@@ -45,15 +58,16 @@ module.exports =
     if settings.get('debug')
       @logHistory "#{subject} [#{location.type}]"
 
-  onDidChangeLocation: (fn) ->
-    @emitter.on 'did-change-location', fn
-
-  deactivate: ->
-    @subscriptions.dispose()
-    @subscriptions = null
-    @history?.destroy()
-    @history = null
-
+  # Mouse handling is not primal purpose of this package
+  # I dont' use mouse basically while coding.
+  # So keep codebase minimal and simple,
+  #  I don't use editor::onDidChangeCursorPosition() to track
+  #  cursor position change caused by mouse click.
+  #
+  # When mouse clicked, cursor position is updated by atom core using setCursorScreenPosition()
+  # To track cursor position change caused by mouse click, I use mousedown event.
+  #  - Event capture phase: Cursor position is not yet changed.
+  #  - Event bubbling phase: Cursor position updated to clicked position.
   observeMouse: ->
     locationStack = []
     handleCapture = ({target}) =>
@@ -66,16 +80,6 @@ module.exports =
       delay 100, =>
         @checkLocationChange(locationStack.pop()) if locationStack.length
 
-    # Mouse handling is not primal purpose of this package
-    # I dont' use mouse basically while coding.
-    # So keep codebase minimal and simple,
-    #  I don't use editor::onDidChangeCursorPosition() to track
-    #  cursor position change caused by mouse click.
-
-    # When mouse clicked, cursor position is updated by atom core using setCursorScreenPosition()
-    # To track cursor position change caused by mouse click, I use mousedown event.
-    #  - Event capture phase: Cursor position is not yet changed.
-    #  - Event bubbling phase: Cursor position updated to clicked position.
     workspaceElement = atom.views.getView(atom.workspace)
     workspaceElement.addEventListener 'mousedown', handleCapture, true
     workspaceElement.addEventListener 'mousedown', handleBubble, false
@@ -84,14 +88,10 @@ module.exports =
       workspaceElement.removeEventListener 'mousedown', handleCapture, true
       workspaceElement.removeEventListener 'mousedown', handleBubble, false
 
+  isIgnoreCommands: (command) ->
+    (command in ignoreCommands) or (command in settings.get('ignoreCommands'))
+
   observeCommands: ->
-    ignoreCommands = [
-      'cursor-history:next',
-      'cursor-history:prev',
-      'cursor-history:next-within-editor',
-      'cursor-history:prev-within-editor',
-      'cursor-history:clear',
-    ]
     shouldSaveLocation = (type, target) ->
       (':' in type) and target.getModel?()?.getURI?()?
 
@@ -102,12 +102,12 @@ module.exports =
       locationStack.push @getLocation(type, target.getModel())
     , 100, true
 
-    @subscriptions.add atom.commands.onWillDispatch ({type, target}) ->
-      return if type in ignoreCommands
+    @subscriptions.add atom.commands.onWillDispatch ({type, target}) =>
+      return if @isIgnoreCommands(type)
       saveLocation(type, target)
 
     @subscriptions.add atom.commands.onDidDispatch ({type, target}) =>
-      return if type in ignoreCommands
+      return if @isIgnoreCommands(type)
       return if locationStack.length is 0
       return unless shouldSaveLocation(type, target)
       # debug "DidDispatch: #{type}"
@@ -126,8 +126,8 @@ module.exports =
 
   jump: (direction, withinEditor=false) ->
     return unless editor = atom.workspace.getActiveTextEditor()
-    forURI = if withinEditor then editor.getURI() else null
     needToSave = (direction is 'prev') and @history.isIndexAtHead()
+    forURI = if withinEditor then editor.getURI() else null
     unless entry = @history.get(direction, URI: forURI)
       return
     # FIXME, Explicitly preserve point, URI by setting independent value,
@@ -156,9 +156,11 @@ module.exports =
       @logHistory(direction)
 
   getLocation: (type, editor) ->
-    point = editor.getCursorBufferPosition()
-    URI   = editor.getURI()
-    {editor, point, URI, type}
+    {
+      type, editor,
+      point: editor.getCursorBufferPosition(),
+      URI: editor.getURI()
+    }
 
   logHistory: (msg) ->
     s = """

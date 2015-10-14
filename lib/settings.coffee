@@ -45,6 +45,12 @@ module.exports = new ConfigPlus 'cursor-history',
     default: 'line'
     enum: ['line', 'word', 'point']
     description: 'Range to be flashed'
+  ignoreCommands:
+    order: 36
+    type: 'array'
+    items: type: 'string'
+    default: ['command-palette:toggle']
+    description: 'list of commands to exclude from history tracking.'
   debug:
     order: 99
     type: 'boolean'
