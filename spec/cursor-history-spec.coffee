@@ -7,10 +7,6 @@ sampleFile2 = "sample-2.coffee"
 getEditor = ->
   atom.workspace.getActiveTextEditor()
 
-dispatchCommand = (element, command) ->
-  atom.commands.dispatch(element, command)
-  advanceClock(100)
-
 isEqualEntry = (e1, e2) ->
   e1Point = Point.fromObject(e1.point)
   e2Point = Point.fromObject(e2.point)
@@ -23,25 +19,30 @@ registerCommands = (element) ->
     'test:move-up-2':   -> getEditor().moveUp(2)
     'test:move-up-5':   -> getEditor().moveUp(5)
 
+dispatchCommand = (element, command) ->
+  atom.commands.dispatch(element, command)
+  advanceClock(100)
+
 describe "cursor-history", ->
-  [editor, editorElement, main, pathSample1] = []
+  [editor, editorElement, main, pathSample1, pathSample2, workspaceElement] = []
+
   beforeEach ->
     spyOn(_._, "now").andCallFake -> window.now
+
+    pathSample1 = atom.project.resolvePath(sampleFile1)
+    pathSample2 = atom.project.resolvePath(sampleFile2)
+
+    workspaceElement = atom.views.getView(atom.workspace)
+    jasmine.attachToDOM(workspaceElement)
 
     waitsForPromise ->
       atom.packages.activatePackage('cursor-history').then (pack) ->
         main = pack.mainModule
 
-      pathSample1 = atom.project.resolvePath(sampleFile1)
-
       atom.workspace.open(pathSample1).then (e) ->
         editor = e
         editorElement = atom.views.getView(e)
-        jasmine.attachToDOM(editorElement)
-        editorElement.focus()
-        registerCommands editorElement
-
-      # atom.config.set('cursor-history.debug', true)
+        registerCommands(editorElement)
 
   describe "initial state of history entries", ->
     it "is empty", ->
@@ -72,6 +73,7 @@ describe "cursor-history", ->
         expect(isEqualEntry(e3, {point: [10, 0], URI: pathSample1})).toBe true
 
       it "wont save history if line delta of move is less than 4 line", ->
+        atom.config.set('cursor-history.debug', true)
         dispatchCommand(editorElement, 'core:move-down')
         expect(editor.getCursorBufferPosition()).toEqual([1, 0])
         expect(main.history.entries.length).toBe 0
@@ -117,19 +119,16 @@ describe "cursor-history", ->
         expect(editor.getCursorBufferPosition()).toEqual([0, 0])
 
     describe "when history is not empty", ->
-      [e1, e2, e3, e4, editor2, editorElement2, workspaceElement, pathSample2] = []
+      [e0, e1, e2, e3, editor2, editorElement2] = []
       beforeEach ->
         runs ->
-          workspaceElement = atom.views.getView(atom.workspace)
           dispatchCommand(editorElement, 'test:move-down-5')
           dispatchCommand(editorElement, 'test:move-down-5')
 
         waitsForPromise ->
-          pathSample2 = atom.project.resolvePath(sampleFile2)
           atom.workspace.open(pathSample2).then (e) ->
             editor2 = e
             editorElement2 = atom.views.getView(e)
-            jasmine.attachToDOM(editorElement2)
             registerCommands(editorElement2)
 
         runs ->
@@ -138,62 +137,69 @@ describe "cursor-history", ->
           entries = main.history.entries
           expect(entries.length).toBe 4
           expect(main.history.index).toBe 4
-          [e1, e2, e3, e4] = entries
+          [e0, e1, e2, e3] = entries
           expect(getEditor().getURI()).toBe(pathSample2)
           expect(getEditor().getCursorBufferPosition()).toEqual([10, 0])
 
+      runCommand = (command, fn) ->
+        runs ->
+          spyOn(main, "land").andCallThrough()
+          atom.commands.dispatch(workspaceElement, command)
+
+        waitsFor ->
+          main.land.callCount is 1
+
+        runs ->
+          fn()
+
+        runs ->
+          jasmine.unspy(main, 'land')
+
+      isEntry = (index) ->
+        expect(main.history.index).toBe index
+        entry = main.history.entries[index]
+        expect(getEditor().getCursorBufferPosition()).toEqual(entry.point)
+        expect(getEditor().getURI()).toBe(entry.URI)
+
       describe "cursor-history:prev", ->
-        fit "visit prev entry of cursor history", ->
-          atom.commands.dispatch(workspaceElement, 'cursor-history:prev')
-          expect(main.history.index).toBe 3
-          expect(getEditor().getCursorBufferPosition()).toEqual(e4.point)
-          expect(getEditor().getURI()).toBe(pathSample2)
-
-          atom.commands.dispatch(workspaceElement, 'cursor-history:prev')
-          expect(main.history.index).toBe 2
-          expect(getEditor().getCursorBufferPosition()).toEqual(e3.point)
-          expect(getEditor().getURI()).toBe(pathSample2)
-
-          atom.commands.dispatch(workspaceElement, 'cursor-history:prev')
-          atom.commands.dispatch(workspaceElement, 'cursor-history:prev')
-          # console.log editorElement.hasFocus()
-          console.log editorElement2.hasFocus()
-          expect(main.history.index).toBe 1
-          # console.log editor.getURI()
-          # expect(getEditor().getCursorBufferPosition()).toEqual(e2.point)
-          # expect(getEditor().getURI()).toBe(pathSample1)
-
-          # atom.commands.dispatch(workspaceElement, 'cursor-history:prev')
-          # expect(main.history.index).toBe 1
-          # expect(editor.getCursorBufferPosition()).toEqual(e2.point)
-          #
-          # atom.commands.dispatch(workspaceElement, 'cursor-history:prev')
-          # expect(main.history.index).toBe 0
-          # expect(editor.getCursorBufferPosition()).toEqual(e1.point)
+        it "visit prev entry of cursor history", ->
+          runCommand 'cursor-history:prev', -> isEntry(3)
+          runCommand 'cursor-history:prev', -> isEntry(2)
+          runCommand 'cursor-history:prev', -> isEntry(1)
+          runCommand 'cursor-history:prev', -> isEntry(0)
 
       describe "cursor-history:next", ->
         it "visit next entry of cursor history", ->
-          editor.setCursorBufferPosition(e1.point)
-          expect(editor.getCursorBufferPosition()).toEqual(e1.point)
+          main.history.index = 0
+          runCommand 'cursor-history:next', -> isEntry(1)
+          runCommand 'cursor-history:next', -> isEntry(2)
+          runCommand 'cursor-history:next', -> isEntry(3)
+
+      describe "cursor-history:prev-within-editor", ->
+        it "visit prev entry of cursor history", ->
+          runCommand 'cursor-history:prev-within-editor', -> isEntry(3)
+          runCommand 'cursor-history:prev-within-editor', -> isEntry(2)
+
+          runs ->
+            atom.commands.dispatch(workspaceElement, 'cursor-history:prev-within-editor')
+            isEntry(2)
+
+      describe "cursor-history:next-within-editor", ->
+        it "visit next entry of cursor history", ->
           main.history.index = 0
 
-          atom.commands.dispatch(workspaceElement, 'cursor-history:next')
-          expect(main.history.index).toBe 1
-          expect(editor.getCursorBufferPosition()).toEqual(e2.point)
+          waitsForPromise ->
+            atom.workspace.open(pathSample1)
 
-          atom.commands.dispatch(workspaceElement, 'cursor-history:next')
-          expect(main.history.index).toBe 2
-          expect(editor.getCursorBufferPosition()).toEqual(e3.point)
+          runCommand 'cursor-history:next-within-editor', -> isEntry(1)
 
-#     describe "cursor-history:next-within-editor", ->
-#       it "skip editor with diferent URI(=path)", ->
-#     describe "cursor-history:prev-within-editor", ->
-#       it "skip editor with diferent URI(=path)", ->
-#
+          runs ->
+            atom.commands.dispatch(workspaceElement, 'cursor-history:next-within-editor')
+            isEntry(1)
+
 #   describe "for destroyed editor", ->
 #     describe "excludeClosedBuffer setting", ->
 #       atom.config.set('cursor-history.excludeClosedBuffer', true)
 #
 #     describe "ignoreCommands setting", ->
 #       atom.config.set('cursor-history.ignoreCommands', [])
-#
