@@ -1,4 +1,4 @@
-# cursor-history
+# cursor-history [![Build Status](https://travis-ci.org/t9md/cursor-history.svg)](https://travis-ci.org/t9md/cursor-history)
 
 Like browser's Go and Back button, like `ctrl-i`, `ctrl-o` in Vim.
 You can go/back to cursor position history.
@@ -28,21 +28,19 @@ No keymap by default.
 
 # Commands
 
-Use following command or set Keymap.
 * `cursor-history:next`: Go to next point in history.
 * `cursor-history:prev`: Go to previous point in history.
 * `cursor-history:next-within-editor`: Go to next point in history within current editor.
 * `cursor-history:prev-within-editor`: Go to previous point in history within current editor.
 * `cursor-history:clear`: Clear history.
 
-# What condition cursor history will be kept?
-
-In the following case save previous cursor location as history.
+# When cursor history saved?
 
 * when editor lost focus.
 * when cursor position's row delta exceeds rows specified by `rowDeltaToRemember`(default 4).
 
 # TODO
+- [x] Spec
 - [x] Don't use editor.onDidChangeCursorPosition, use atom.commands.onDidDispatch instead.
 - [ ] Support serialization to support per-project cursor history.
 - [x] Configuration option to exclude closed buffer.
