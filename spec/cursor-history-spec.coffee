@@ -146,14 +146,9 @@ describe "cursor-history", ->
           spyOn(main, "land").andCallThrough()
           atom.commands.dispatch(workspaceElement, command)
 
-        waitsFor ->
-          main.land.callCount is 1
-
-        runs ->
-          fn()
-
-        runs ->
-          jasmine.unspy(main, 'land')
+        waitsFor -> main.land.callCount is 1
+        runs -> fn()
+        runs -> jasmine.unspy(main, 'land')
 
       isEntry = (index) ->
         expect(main.history.index).toBe index
