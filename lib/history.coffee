@@ -1,13 +1,9 @@
 # Refactoring status: 100s%
 _ = require 'underscore-plus'
 Entry = require './entry'
-{debug} = require './utils'
 settings = require './settings'
 
 class History
-  entries: []
-  index: 0
-
   constructor: ->
     @init()
 
@@ -28,7 +24,7 @@ class History
 
   findIndex: (direction, URI=null) ->
     [start, indexes] = switch direction
-      when 'next' then [start=(@index + 1), [start..(@entries.length-1)]]
+      when 'next' then [start=(@index + 1), [start..(@entries.length - 1)]]
       when 'prev' then [start=(@index - 1), [start..0]]
 
     # Check if valid index range
@@ -48,10 +44,10 @@ class History
       @entries[@index=index]
 
   # History concatenation mimicking Vim's way.
-  # newMarker(=old position from where you jump to land here) is
+  # newEntry(=old position from where you jump to land here) is
   # *always* added to end of @entries.
-  # Whenever newMarker is added old Marker wich have same row with
-  # newMarker is removed.
+  # Whenever newEntry is added old Marker wich have same row with
+  # newEntry is removed.
   # This allows you to get back to old position(row) only once.
   #
   #  http://vimhelp.appspot.com/motion.txt.html#jump-motions
@@ -73,11 +69,11 @@ class History
   #         >   _    5 9
   #
   # 1. Initial State, @index=3(row=7)
-  # 2. Jump from row=7 to row=9, newMarker(row=7) is appended to end
+  # 2. Jump from row=7 to row=9, newEntry(row=7) is appended to end
   #    of @entries then old row=7(@index=3) was deleted.
   #    @index adjusted to head of @entries(@index = @entries.length).
   # 3. Back from row=9 to row=7 with `cursor-history:prev`.
-  #    newMarker(row=9) is appended to end of @entries.
+  #    newEntry(row=9) is appended to end of @entries.
   #    No special @index adjustment.
   #
   # Case-2:
@@ -92,11 +88,11 @@ class History
   #         >   _
   #
   # 1. Initial State, @index=1(row=3)
-  # 2. Jump from row=3 to row=7, newMarker(row=3) is appended to end
+  # 2. Jump from row=3 to row=7, newEntry(row=3) is appended to end
   #    of @entries then old row=3(@index=1) was deleted.
   #    @index adjusted to head of @entries(@index = @entries.length).
   # 3. Back from row=7 to row=3 with `cursor-history:prev`.
-  #    newMarker(row=7) is appended to end of @entries.
+  #    newEntry(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
   add: ({editor, point, URI}, {setIndexToHead}={}) ->

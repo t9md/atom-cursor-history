@@ -3,10 +3,9 @@
 _ = require 'underscore-plus'
 path = require 'path'
 
-History  = require './history'
-Flasher  = require './flasher'
+History  = null
+Flasher  = null
 settings = require './settings'
-{delay, debug} = require './utils'
 
 ignoreCommands = [
   'cursor-history:next',
@@ -23,14 +22,16 @@ module.exports =
 
   activate: ->
     @subscriptions = new CompositeDisposable
+    History  = require './history'
+    Flasher  = require './flasher'
     @history = new History
     @emitter = new Emitter
 
     atom.commands.add 'atom-workspace',
       'cursor-history:next':  => @jump('next')
       'cursor-history:prev':  => @jump('prev')
-      'cursor-history:next-within-editor': => @jump('next', true)
-      'cursor-history:prev-within-editor': => @jump('prev', true)
+      'cursor-history:next-within-editor': => @jump('next', withinEditor: true)
+      'cursor-history:prev-within-editor': => @jump('prev', withinEditor: true)
       'cursor-history:clear': => @history.clear()
       'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
@@ -41,14 +42,14 @@ module.exports =
       if @needRemember(oldLocation.point, newLocation.point)
         @saveHistory oldLocation, subject: "Cursor moved"
 
+  onDidChangeLocation: (fn) ->
+    @emitter.on 'did-change-location', fn
+
   deactivate: ->
     @subscriptions.dispose()
     @subscriptions = null
     @history?.destroy()
     @history = null
-
-  onDidChangeLocation: (fn) ->
-    @emitter.on 'did-change-location', fn
 
   needRemember: (oldPoint, newPoint) ->
     Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
@@ -77,8 +78,9 @@ module.exports =
 
     handleBubble = ({target}) =>
       return unless target.getModel?()?.getURI?()?
-      delay 100, =>
+      setTimeout =>
         @checkLocationChange(locationStack.pop()) if locationStack.length
+      , 100
 
     workspaceElement = atom.views.getView(atom.workspace)
     workspaceElement.addEventListener 'mousedown', handleCapture, true
@@ -98,7 +100,7 @@ module.exports =
     locationStack = []
     saveLocation = _.debounce (type, target) =>
       return unless shouldSaveLocation(type, target)
-      # debug "WillDispatch: #{type}"
+      # console.log  "WillDispatch: #{type}"
       locationStack.push @getLocation(type, target.getModel())
     , 100, true
 
@@ -110,21 +112,21 @@ module.exports =
       return if @isIgnoreCommands(type)
       return if locationStack.length is 0
       return unless shouldSaveLocation(type, target)
-      # debug "DidDispatch: #{type}"
-      delay 100, =>
+      # console.log  "DidDispatch: #{type}"
+      setTimeout =>
         @checkLocationChange(locationStack.pop()) if locationStack.length
+      , 100
 
   checkLocationChange: (oldLocation) ->
-    {type, URI} = oldLocation
     return unless editor = atom.workspace.getActiveTextEditor()
     editorElement = atom.views.getView(editor)
-    if editorElement.hasFocus() and (editor.getURI() is URI)
-      newLocation = @getLocation(type, editor)
+    if editorElement.hasFocus() and (editor.getURI() is oldLocation.URI)
+      newLocation = @getLocation(oldLocation.type, editor)
       @emitter.emit 'did-change-location', {oldLocation, newLocation}
     else
       @saveHistory oldLocation, subject: "Save on focus lost"
 
-  jump: (direction, withinEditor=false) ->
+  jump: (direction, {withinEditor}={}) ->
     return unless editor = atom.workspace.getActiveTextEditor()
     needToSave = (direction is 'prev') and @history.isIndexAtHead()
     forURI = if withinEditor then editor.getURI() else null
