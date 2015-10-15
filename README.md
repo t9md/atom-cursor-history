@@ -1,6 +1,5 @@
 # cursor-history [![Build Status](https://travis-ci.org/t9md/atom-cursor-history.svg)](https://travis-ci.org/t9md/atom-cursor-history)
 
-
 Like browser's Go and Back button, like `ctrl-i`, `ctrl-o` in Vim.
 You can go/back to cursor position history.
 
