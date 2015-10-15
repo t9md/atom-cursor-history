@@ -1,3 +1,6 @@
+## 0.5.5 - Spec complete
+* Add travis-CI
+
 ## 0.5.4 - Improve/Add spec
 * Refactoring.
 * Add ignoreCommands setting parameter.
