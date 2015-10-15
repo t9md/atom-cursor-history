@@ -39,6 +39,7 @@ describe "cursor-history", ->
       atom.packages.activatePackage('cursor-history').then (pack) ->
         main = pack.mainModule
 
+    waitsForPromise ->
       atom.workspace.open(pathSample1).then (e) ->
         editor = e
         editorElement = atom.views.getView(e)
@@ -73,7 +74,6 @@ describe "cursor-history", ->
         expect(isEqualEntry(e3, {point: [10, 0], URI: pathSample1})).toBe true
 
       it "wont save history if line delta of move is less than 4 line", ->
-        atom.config.set('cursor-history.debug', true)
         dispatchCommand(editorElement, 'core:move-down')
         expect(editor.getCursorBufferPosition()).toEqual([1, 0])
         expect(main.history.entries.length).toBe 0
@@ -100,23 +100,26 @@ describe "cursor-history", ->
           expect(isEqualEntry(entry, {point: [2, 5], URI: pathSample1})).toBe true
 
   describe "go/back history with next/prev commands", ->
-    beforeEach ->
+    isInitialState = ->
       expect(main.history.entries.length).toBe 0
       expect(editor.getCursorBufferPosition()).toEqual([0, 0])
+
+    beforeEach ->
+      isInitialState()
 
     describe "when history is empty", ->
       it "do nothing with next", ->
         dispatchCommand(editorElement, 'cursor-history:next')
-        expect(editor.getCursorBufferPosition()).toEqual([0, 0])
+        isInitialState()
       it "do nothing with prev", ->
         dispatchCommand(editorElement, 'cursor-history:prev')
-        expect(editor.getCursorBufferPosition()).toEqual([0, 0])
+        isInitialState()
       it "do nothing with next-within-editor", ->
         dispatchCommand(editorElement, 'cursor-history:next-within-editor')
-        expect(editor.getCursorBufferPosition()).toEqual([0, 0])
+        isInitialState()
       it "do nothing with prev-within-editor", ->
         dispatchCommand(editorElement, 'cursor-history:prev-within-editor')
-        expect(editor.getCursorBufferPosition()).toEqual([0, 0])
+        isInitialState()
 
     describe "when history is not empty", ->
       [e0, e1, e2, e3, editor2, editorElement2] = []
@@ -163,6 +166,14 @@ describe "cursor-history", ->
           runCommand 'cursor-history:prev', -> isEntry(1)
           runCommand 'cursor-history:prev', -> isEntry(0)
 
+        it "save last position if index is at head(=length of entries)", ->
+          expect(main.history.entries.length).toBe 4
+          runCommand 'cursor-history:prev', -> isEntry(3)
+          runs ->
+            expect(main.history.entries.length).toBe 5
+            entry = _.last(main.history.entries)
+            expect(isEqualEntry(entry, {point: [10, 0], URI: pathSample2})).toBe true
+
       describe "cursor-history:next", ->
         it "visit next entry of cursor history", ->
           main.history.index = 0
@@ -171,7 +182,7 @@ describe "cursor-history", ->
           runCommand 'cursor-history:next', -> isEntry(3)
 
       describe "cursor-history:prev-within-editor", ->
-        it "visit prev entry of cursor history", ->
+        it "visit prev entry of history within same editor", ->
           runCommand 'cursor-history:prev-within-editor', -> isEntry(3)
           runCommand 'cursor-history:prev-within-editor', -> isEntry(2)
 
@@ -180,7 +191,7 @@ describe "cursor-history", ->
             isEntry(2)
 
       describe "cursor-history:next-within-editor", ->
-        it "visit next entry of cursor history", ->
+        it "visit next entry of history within same editor", ->
           main.history.index = 0
 
           waitsForPromise ->
@@ -192,9 +203,45 @@ describe "cursor-history", ->
             atom.commands.dispatch(workspaceElement, 'cursor-history:next-within-editor')
             isEntry(1)
 
-#   describe "for destroyed editor", ->
-#     describe "excludeClosedBuffer setting", ->
-#       atom.config.set('cursor-history.excludeClosedBuffer', true)
-#
-#     describe "ignoreCommands setting", ->
-#       atom.config.set('cursor-history.ignoreCommands', [])
+      describe "when editor is destroyed", ->
+        getValidEntries = ->
+          e for e in main.history.entries when e.isValid()
+
+        beforeEach ->
+          expect(getEditor().getURI()).toBe(pathSample2)
+          runs ->
+            editor2.destroy()
+          runs ->
+            expect(editor2.isAlive()).toBe false
+            expect(getEditor().getURI()).toBe(pathSample1)
+            expect(getValidEntries().length).toBe 4
+
+        it "still can reopen and visit entry for once destroyed editor", ->
+          runCommand 'cursor-history:prev', -> isEntry(3)
+          runCommand 'cursor-history:prev', -> isEntry(2)
+          runCommand 'cursor-history:prev', -> isEntry(1)
+          runCommand 'cursor-history:prev', -> isEntry(0)
+          runCommand 'cursor-history:next', -> isEntry(1)
+          runCommand 'cursor-history:next', -> isEntry(2)
+          runCommand 'cursor-history:next', -> isEntry(3)
+
+        describe "excludeClosedBuffer setting is true", ->
+          beforeEach ->
+            atom.config.set('cursor-history.excludeClosedBuffer', true)
+
+          it "skip entry for destroyed editor", ->
+            expect(getValidEntries().length).toBe 2
+            runCommand 'cursor-history:prev', -> isEntry(1)
+            runs ->
+              expect(main.history.entries.length).toBe 5
+              expect(getValidEntries().length).toBe 3
+
+          it "remove dstroyed entry from history when new entry is added", ->
+            expect(getValidEntries().length).toBe 2
+            expect(main.history.entries.length).toBe 4
+            dispatchCommand(editorElement, 'test:move-down-5')
+            expect(editor.getCursorBufferPosition()).toEqual [15, 0]
+            entry = _.last(main.history.entries)
+            expect(isEqualEntry(entry, {point: [10, 0], URI: pathSample1})).toBe true
+            expect(getValidEntries().length).toBe 3
+            expect(main.history.entries.length).toBe 3
