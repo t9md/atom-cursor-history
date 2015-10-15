@@ -1,4 +1,4 @@
-## 0.5.4 - [not released yet]
+## 0.5.4 - Improve/Add spec
 * Refactoring.
 * Add ignoreCommands setting parameter.
 * Add spec
