@@ -245,3 +245,39 @@ describe "cursor-history", ->
             expect(isEqualEntry(entry, {point: [10, 0], URI: pathSample1})).toBe true
             expect(getValidEntries().length).toBe 3
             expect(main.history.entries.length).toBe 3
+
+    describe "ignoreCommands setting", ->
+      [editor2, editorElement2] = []
+      beforeEach ->
+        editor.setCursorBufferPosition([1, 2])
+        expect(main.history.entries.length).toBe 0
+        expect(editorElement.hasFocus()).toBe true
+
+        jasmine.useRealClock()
+        spyOn(atom.workspace, "getActiveTextEditor").andCallThrough()
+        atom.commands.add editorElement,
+          'test:open-sample2': ->
+            atom.workspace.open(pathSample2).then (e) ->
+              editor2 = e
+              editorElement2 = atom.views.getView(e)
+
+      describe "ignoreCommands is empty", ->
+        it "save cursor position to history when editor lost focus", ->
+          atom.config.set('cursor-history.ignoreCommands', [])
+          runs -> atom.commands.dispatch(editorElement, 'test:open-sample2')
+          waitsFor -> atom.workspace.getActiveTextEditor.callCount is 1
+          waitsFor -> editorElement2.hasFocus() is true
+
+          runs ->
+            expect(main.history.entries.length).toBe 1
+            entry = _.last(main.history.entries)
+            expect(isEqualEntry(entry, {point: [1, 2], URI: pathSample1})).toBe true
+
+      describe "ignoreCommands is set and match command name", ->
+        it "won't save cursor position to history when editor lost focus", ->
+          atom.config.set('cursor-history.ignoreCommands', ['test:open-sample2'])
+          runs -> atom.commands.dispatch(editorElement, 'test:open-sample2')
+          waitsFor -> editorElement2.hasFocus() is true
+
+          runs ->
+            expect(main.history.entries.length).toBe 0
