@@ -1,4 +1,3 @@
-# Refactoring status: 100%
 {CompositeDisposable} = require 'atom'
 fs       = require 'fs'
 settings = require './settings'
@@ -13,15 +12,14 @@ class Entry
 
     @editor = editor
     @subscriptions = new CompositeDisposable
-    marker = @editor.markBufferPosition @point,
+    @marker = @editor.markBufferPosition @point,
       invalidate: 'never',
       persistent: false
 
-    @subscriptions.add marker.onDidChange ({newHeadBufferPosition}) =>
+    @subscriptions.add @marker.onDidChange ({newHeadBufferPosition}) =>
       @point = newHeadBufferPosition
 
     @subscriptions.add @editor.onDidDestroy =>
-      marker.destroy()
       @unSubscribe()
 
   unSubscribe: ->
@@ -32,7 +30,8 @@ class Entry
   destroy: ->
     @unSubscribe() if @editor?
     @destroyed = true
-    {@point, @URI} = {}
+    @marker.destroy()
+    {@point, @URI, @marker} = {}
 
   isDestroyed: ->
     @destroyed

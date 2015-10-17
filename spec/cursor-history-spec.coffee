@@ -1,16 +1,14 @@
 _ = require 'underscore-plus'
 {Point} = require 'atom'
 
-sampleFile1 = "sample-1.coffee"
-sampleFile2 = "sample-2.coffee"
-
 getEditor = ->
   atom.workspace.getActiveTextEditor()
 
 isEqualEntry = (e1, e2) ->
-  e1Point = Point.fromObject(e1.point)
-  e2Point = Point.fromObject(e2.point)
-  (e1.URI is e2.URI) and e1Point.isEqual(e2Point)
+  if (e1.URI is e2.URI)
+    Point.fromObject(e1.point).isEqual Point.fromObject(e2.point)
+  else
+    false
 
 registerCommands = (element) ->
   atom.commands.add element,
@@ -26,12 +24,14 @@ dispatchCommand = (element, command) ->
 describe "cursor-history", ->
   [editor, editorElement, main, pathSample1, pathSample2, workspaceElement] = []
 
+  getEntries = ->
+    main.history.entries
+
   beforeEach ->
     spyOn(_._, "now").andCallFake -> window.now
 
-    pathSample1 = atom.project.resolvePath(sampleFile1)
-    pathSample2 = atom.project.resolvePath(sampleFile2)
-
+    pathSample1 = atom.project.resolvePath "sample-1.coffee"
+    pathSample2 = atom.project.resolvePath "sample-2.coffee"
     workspaceElement = atom.views.getView(atom.workspace)
     jasmine.attachToDOM(workspaceElement)
 
@@ -47,27 +47,25 @@ describe "cursor-history", ->
 
   describe "initial state of history entries", ->
     it "is empty", ->
-      expect(main.history.entries.length).toBe 0
+      expect(getEntries()).toHaveLength 0
     it "index is 0", ->
       expect(main.history.index).toBe 0
 
   describe "history saving", ->
     describe "cursor moved", ->
       it "save history when cursor moved over 4 line by default", ->
-        editor.setCursorBufferPosition([0, 5])
+        editor.setCursorBufferPosition [0, 5]
         dispatchCommand(editorElement, 'test:move-down-5')
-        expect(main.history.entries.length).toBe 1
-        {point, URI} = main.history.entries[0]
-        expect(point).toEqual([0, 5])
-        expect(URI).toEqual(pathSample1)
+        expect(getEntries()).toHaveLength 1
+        entry = _.first(getEntries())
+        expect(isEqualEntry(entry, {point: [0, 5], URI: pathSample1})).toBe true
 
       it "can save multiple entry", ->
         dispatchCommand(editorElement, 'test:move-down-5')
         dispatchCommand(editorElement, 'test:move-down-5')
         dispatchCommand(editorElement, 'test:move-down-5')
-        entries = main.history.entries
-
-        expect(entries.length).toBe 3
+        entries = getEntries()
+        expect(entries).toHaveLength 3
         [e1, e2, e3] = entries
         expect(isEqualEntry(e1, {point: [0, 0], URI: pathSample1})).toBe true
         expect(isEqualEntry(e2, {point: [5, 0], URI: pathSample1})).toBe true
@@ -76,7 +74,7 @@ describe "cursor-history", ->
       it "wont save history if line delta of move is less than 4 line", ->
         dispatchCommand(editorElement, 'core:move-down')
         expect(editor.getCursorBufferPosition()).toEqual([1, 0])
-        expect(main.history.entries.length).toBe 0
+        expect(getEntries()).toHaveLength 0
 
     xit "save history when focus lost", ->
     xit "save history when mouseclick", ->
@@ -89,19 +87,19 @@ describe "cursor-history", ->
           editor.setCursorBufferPosition([0, 5])
           dispatchCommand(editorElement, 'test:move-down-2')
           expect(editor.getCursorBufferPosition()).toEqual([2, 5])
-          expect(main.history.entries.length).toBe 1
-          entry = main.history.entries[0]
+          expect(getEntries()).toHaveLength 1
+          entry = _.first(getEntries())
           expect(isEqualEntry(entry, {point: [0, 5], URI: pathSample1})).toBe true
 
           dispatchCommand(editorElement, 'test:move-down-2')
           expect(editor.getCursorBufferPosition()).toEqual([4, 5])
-          expect(main.history.entries.length).toBe 2
-          entry = _.last(main.history.entries)
+          expect(getEntries()).toHaveLength 2
+          entry = _.last(getEntries())
           expect(isEqualEntry(entry, {point: [2, 5], URI: pathSample1})).toBe true
 
   describe "go/back history with next/prev commands", ->
     isInitialState = ->
-      expect(main.history.entries.length).toBe 0
+      expect(getEntries()).toHaveLength 0
       expect(editor.getCursorBufferPosition()).toEqual([0, 0])
 
     beforeEach ->
@@ -137,8 +135,8 @@ describe "cursor-history", ->
         runs ->
           dispatchCommand(editorElement2, 'test:move-down-5')
           dispatchCommand(editorElement2, 'test:move-down-5')
-          entries = main.history.entries
-          expect(entries.length).toBe 4
+          entries = getEntries()
+          expect(entries).toHaveLength 4
           expect(main.history.index).toBe 4
           [e0, e1, e2, e3] = entries
           expect(getEditor().getURI()).toBe(pathSample2)
@@ -155,7 +153,7 @@ describe "cursor-history", ->
 
       isEntry = (index) ->
         expect(main.history.index).toBe index
-        entry = main.history.entries[index]
+        entry = getEntries()[index]
         expect(getEditor().getCursorBufferPosition()).toEqual(entry.point)
         expect(getEditor().getURI()).toBe(entry.URI)
 
@@ -167,11 +165,11 @@ describe "cursor-history", ->
           runCommand 'cursor-history:prev', -> isEntry(0)
 
         it "save last position if index is at head(=length of entries)", ->
-          expect(main.history.entries.length).toBe 4
+          expect(getEntries()).toHaveLength 4
           runCommand 'cursor-history:prev', -> isEntry(3)
           runs ->
-            expect(main.history.entries.length).toBe 5
-            entry = _.last(main.history.entries)
+            expect(getEntries()).toHaveLength 5
+            entry = _.last(getEntries())
             expect(isEqualEntry(entry, {point: [10, 0], URI: pathSample2})).toBe true
 
       describe "cursor-history:next", ->
@@ -205,7 +203,7 @@ describe "cursor-history", ->
 
       describe "when editor is destroyed", ->
         getValidEntries = ->
-          e for e in main.history.entries when e.isValid()
+          e for e in getEntries() when e.isValid()
 
         beforeEach ->
           expect(getEditor().getURI()).toBe(pathSample2)
@@ -214,7 +212,7 @@ describe "cursor-history", ->
           runs ->
             expect(editor2.isAlive()).toBe false
             expect(getEditor().getURI()).toBe(pathSample1)
-            expect(getValidEntries().length).toBe 4
+            expect(getValidEntries()).toHaveLength 4
 
         it "still can reopen and visit entry for once destroyed editor", ->
           runCommand 'cursor-history:prev', -> isEntry(3)
@@ -230,27 +228,27 @@ describe "cursor-history", ->
             atom.config.set('cursor-history.excludeClosedBuffer', true)
 
           it "skip entry for destroyed editor", ->
-            expect(getValidEntries().length).toBe 2
+            expect(getValidEntries()).toHaveLength 2
             runCommand 'cursor-history:prev', -> isEntry(1)
             runs ->
-              expect(main.history.entries.length).toBe 5
-              expect(getValidEntries().length).toBe 3
+              expect(getEntries()).toHaveLength 5
+              expect(getValidEntries()).toHaveLength 3
 
           it "remove dstroyed entry from history when new entry is added", ->
-            expect(getValidEntries().length).toBe 2
-            expect(main.history.entries.length).toBe 4
+            expect(getValidEntries()).toHaveLength 2
+            expect(getEntries()).toHaveLength 4
             dispatchCommand(editorElement, 'test:move-down-5')
             expect(editor.getCursorBufferPosition()).toEqual [15, 0]
-            entry = _.last(main.history.entries)
+            entry = _.last(getEntries())
             expect(isEqualEntry(entry, {point: [10, 0], URI: pathSample1})).toBe true
-            expect(getValidEntries().length).toBe 3
-            expect(main.history.entries.length).toBe 3
+            expect(getValidEntries()).toHaveLength 3
+            expect(getEntries()).toHaveLength 3
 
     describe "ignoreCommands setting", ->
       [editor2, editorElement2] = []
       beforeEach ->
         editor.setCursorBufferPosition([1, 2])
-        expect(main.history.entries.length).toBe 0
+        expect(getEntries()).toHaveLength 0
         expect(editorElement.hasFocus()).toBe true
 
         jasmine.useRealClock()
@@ -269,8 +267,8 @@ describe "cursor-history", ->
           waitsFor -> editorElement2.hasFocus() is true
 
           runs ->
-            expect(main.history.entries.length).toBe 1
-            entry = _.last(main.history.entries)
+            expect(getEntries()).toHaveLength 1
+            entry = _.last(getEntries())
             expect(isEqualEntry(entry, {point: [1, 2], URI: pathSample1})).toBe true
 
       # FIXME: using realClock clear config.cson completely!!!
@@ -284,4 +282,4 @@ describe "cursor-history", ->
           waitsFor -> editorElement2?.hasFocus() is true
 
           runs ->
-            expect(main.history.entries.length).toBe 0
+            expect(getEntries()).toHaveLength 0

@@ -1,4 +1,3 @@
-# Refactoring status: 100s%
 _ = require 'underscore-plus'
 Entry = require './entry'
 settings = require './settings'
