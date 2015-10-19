@@ -1,5 +1,7 @@
 ## 0.5.5 - Spec complete
 * Add travis-CI
+* More spec coverage, and cleanup.
+* Change default flash duration from 200ms to 150ms
 
 ## 0.5.4 - Improve/Add spec
 * Refactoring.

@@ -31,7 +31,7 @@ module.exports = new ConfigPlus 'cursor-history',
   flashDurationMilliSeconds:
     order: 33
     type: 'integer'
-    default: 200
+    default: 150
     description: "Duration for flash"
   flashColor:
     order: 34

@@ -7,7 +7,7 @@ You can go/back to cursor position history.
 
 # Keymap
 
-No keymap by default.
+No default keymap. You need to set by yourself.  
 
 * e.g.
 
@@ -19,13 +19,6 @@ No keymap by default.
   'ctrl-cmd-o': 'cursor-history:prev-within-editor'
 ```
 
-# Features
-
-* Can jump to prev/next point of closed Buffer(can configure exclude closed buffer).
-* Flash cursor line on land. Can disable or customize flash color, duration and type(line, word, point).
-* Vim like history concatnation(Never save same line per file. This allow you to jump specific line only once).
-* Auto adjust cursor position to middle of screen if target was off-screen.
-
 # Commands
 
 * `cursor-history:next`: Go to next point in history.
@@ -33,6 +26,13 @@ No keymap by default.
 * `cursor-history:next-within-editor`: Go to next point in history within current editor.
 * `cursor-history:prev-within-editor`: Go to previous point in history within current editor.
 * `cursor-history:clear`: Clear history.
+
+# Features
+
+* Go and Back to prev/next position of cursor history including closed buffer(can exclude closed buffer with config option).
+* Flash cursor line on land. Can disable, customize flash color, duration and type(line, word, point).
+* Vim like history concatnation(Never save same line per file. This allow you to jump specific line only once).
+* Auto adjust cursor position to middle of screen if target was off-screen.
 
 # When cursor history saved?
 
