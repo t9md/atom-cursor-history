@@ -8,6 +8,7 @@ path = null
 #  For destroyed editor, use Point.
 class Entry
   constructor: (editor, @point, @URI) ->
+    @destroyed = false
     return unless editor.isAlive()
 
     @editor = editor
@@ -30,7 +31,7 @@ class Entry
   destroy: ->
     @unSubscribe() if @editor?
     @destroyed = true
-    @marker.destroy()
+    @marker?.destroy()
     {@point, @URI, @marker} = {}
 
   isDestroyed: ->
