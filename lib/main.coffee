@@ -27,7 +27,7 @@ module.exports =
     @history = new History
     @emitter = new Emitter
 
-    atom.commands.add 'atom-workspace',
+    @subscriptions.add atom.commands.add 'atom-workspace',
       'cursor-history:next':  => @jump('next')
       'cursor-history:prev':  => @jump('prev')
       'cursor-history:next-within-editor': => @jump('next', withinEditor: true)

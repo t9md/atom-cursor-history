@@ -95,13 +95,11 @@ class History
   #    No special @index adjustment.
   #
   add: ({editor, point, URI}, {setIndexToHead}={}) ->
-    setIndexToHead ?= true
     newEntry = new Entry(editor, point, URI)
-    for e, i in @entries when e.isAtSameRow(newEntry)
-      e.destroy()
+    e.destroy() for e in @entries when e.isAtSameRow(newEntry)
     @entries.push newEntry
 
-    if setIndexToHead
+    if setIndexToHead ? true
       # Only when setIndexToHead is true, we can safely remove @entries.
       @removeEntries()
       @index = @entries.length
