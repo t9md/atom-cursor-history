@@ -6,7 +6,7 @@
   "repository": "https://github.com/t9md/atom-cursor-history",
   "license": "MIT",
   "engines": {
-    "atom": ">=0.174.0 <2.0.0"
+    "atom": ">=1.0.8 <2.0.0"
   },
   "dependencies": {
     "atom-config-plus": "^0.1.2",
