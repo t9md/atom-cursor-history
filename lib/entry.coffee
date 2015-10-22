@@ -14,7 +14,7 @@ class Entry
     @editor = editor
     @subscriptions = new CompositeDisposable
     @marker = @editor.markBufferPosition @point,
-      invalidate: 'never',
+      invalidate: 'never'
       persistent: false
 
     @subscriptions.add @marker.onDidChange ({newHeadBufferPosition}) =>
@@ -24,9 +24,8 @@ class Entry
       @unSubscribe()
 
   unSubscribe: ->
-    @editor = null
     @subscriptions.dispose()
-    @subscriptions = null
+    {@editor, @subscriptions} = {}
 
   destroy: ->
     @unSubscribe() if @editor?

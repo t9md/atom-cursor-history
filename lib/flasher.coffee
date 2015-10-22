@@ -7,17 +7,17 @@ class Flasher
     @clear()
     editor = atom.workspace.getActiveTextEditor()
     spec =
-    switch settings.get('flashType')
-      when 'line'
-        type: 'line'
-        range: editor.getLastCursor().getCurrentLineBufferRange()
-      when 'word'
-        type: 'highlight'
-        range: editor.getLastCursor().getCurrentWordBufferRange()
-      when 'point'
-        point = editor.getCursorBufferPosition()
-        type: 'highlight'
-        range: new Range(point, point.translate([0, 1]))
+      switch settings.get('flashType')
+        when 'line'
+          type: 'line'
+          range: editor.getLastCursor().getCurrentLineBufferRange()
+        when 'word'
+          type: 'highlight'
+          range: editor.getLastCursor().getCurrentWordBufferRange()
+        when 'point'
+          point = editor.getCursorBufferPosition()
+          type: 'highlight'
+          range: new Range(point, point.translate([0, 1]))
 
     marker = editor.markBufferRange spec.range,
       invalidate: 'never'

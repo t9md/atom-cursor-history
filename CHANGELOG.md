@@ -1,3 +1,6 @@
+## 0.5.6 - [WIP]
+* Minor refactoring.
+
 ## 0.5.5 - Spec complete
 * Add travis-CI
 * More spec coverage, and cleanup.
