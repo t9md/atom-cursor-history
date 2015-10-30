@@ -1,5 +1,6 @@
-## 0.5.6 - [WIP]
+## 0.5.6
 * Minor refactoring.
+* use Promise.then instead of done.
 
 ## 0.5.5 - Spec complete
 * Add travis-CI

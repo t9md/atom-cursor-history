@@ -146,7 +146,7 @@ module.exports =
       @land(editor, options)
     else
       searchAllPanes = settings.get('searchAllPanes')
-      atom.workspace.open(URI, {searchAllPanes}).done (editor) =>
+      atom.workspace.open(URI, {searchAllPanes}).then (editor) =>
         @land(editor, options)
 
   land: (editor, {point, direction, log}) ->
