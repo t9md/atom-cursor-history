@@ -1,3 +1,6 @@
+## 0.5.7
+* FIX: When landing by prev/next commands, cursor position is not properly centered.
+
 ## 0.5.6
 * Minor refactoring.
 * [FIX deprecation warning] use Promise.then instead of done.

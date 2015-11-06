@@ -150,8 +150,8 @@ module.exports =
         @land(editor, options)
 
   land: (editor, {point, direction, log}) ->
-    editor.scrollToBufferPosition(point, center: true)
     editor.setCursorBufferPosition(point)
+    editor.scrollToCursorPosition({center: true})
     Flasher.flash() if settings.get('flashOnLand')
 
     if settings.get('debug') and log
