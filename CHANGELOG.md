@@ -1,6 +1,10 @@
-## 0.5.7
+## 0.5.8
 * FIX: When landing by prev/next commands, cursor position is not properly centered.
 * Update supported engines to over v1.1.0
+
+## 0.5.7
+skip because of release mistaken.
+0.5.8 was meant to be 0.5.7.
 
 ## 0.5.6
 * Minor refactoring.
