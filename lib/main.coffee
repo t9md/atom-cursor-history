@@ -1,5 +1,5 @@
 # Refactoring Status: 90%
-{CompositeDisposable, Disposable, TextEditor, Emitter} = require 'atom'
+{CompositeDisposable, Disposable, Emitter} = require 'atom'
 _ = require 'underscore-plus'
 path = require 'path'
 

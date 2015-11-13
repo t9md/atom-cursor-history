@@ -1,3 +1,6 @@
+## 0.5.9 WIP
+* FIX: Warning from Atom v1.2.0
+
 ## 0.5.8
 * FIX: When landing by prev/next commands, cursor position is not properly centered.
 * Update supported engines to over v1.1.0
