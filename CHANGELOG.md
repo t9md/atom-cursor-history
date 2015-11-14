@@ -1,4 +1,4 @@
-## 0.5.9 WIP
+## 0.5.9
 * FIX: Warning from Atom v1.2.0
 
 ## 0.5.8
