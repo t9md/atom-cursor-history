@@ -18,6 +18,11 @@ module.exports = new ConfigPlus 'cursor-history',
     type: 'boolean'
     default: false
     description: "Don't open closed Buffer on history excursion"
+  onlyBufferFiles:
+    order: 14
+    type: 'boolean'
+    default: false
+    description: "Only save the last row per file"
   searchAllPanes:
     order: 31
     type: 'boolean'
