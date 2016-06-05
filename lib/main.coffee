@@ -35,6 +35,10 @@ module.exports =
       'cursor-history:clear': => @history.clear()
       'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
+    uniqueByBuffer = (newValue) =>
+      @history.uniqueByBuffer() if newValue
+    @subscriptions.add settings.observe('keepSingleEntryPerBuffer', uniqueByBuffer)
+
     @observeMouse()
     @observeCommands()
 
@@ -133,7 +137,7 @@ module.exports =
       switch
         when withinEditor
           uri = editor.getURI()
-          @history.get(direction, (e) -> e.URI is uri)
+          @history.get(direction, ({URI}) -> URI is uri)
         else
           @history.get(direction, -> true)
 

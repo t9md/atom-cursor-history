@@ -91,13 +91,28 @@ class History
   #
   add: ({editor, point, URI}, {setIndexToHead}={}) ->
     newEntry = new Entry(editor, point, URI)
-    e.destroy() for e in @entries when e.isAtSameRow(newEntry)
-    @entries.push newEntry
 
+    if settings.get('keepSingleEntryPerBuffer')
+      e.destroy() for e in @entries when e.URI is URI
+    else
+      e.destroy() for e in @entries when e.isAtSameRow(newEntry)
+
+    @entries.push newEntry
     if setIndexToHead ? true
       # Only when setIndexToHead is true, we can safely remove @entries.
       @removeEntries()
       @index = @entries.length
+
+  uniqueByBuffer: ->
+    return unless @entries.length
+    buffers = []
+    for entry in @entries.slice().reverse()
+      URI = entry.URI
+      if URI in buffers
+        entry.destroy()
+      else
+        buffers.push(URI)
+    @removeEntries()
 
   removeEntries: ->
     # Scrub invalid

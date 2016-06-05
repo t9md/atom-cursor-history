@@ -38,6 +38,12 @@ class Settings
   set: (param, value) ->
     atom.config.set "#{@scope}.#{param}", value
 
+  toggle: (param) ->
+    @set(param, not @get(param))
+
+  observe: (param, fn) ->
+    atom.config.observe "#{@scope}.#{param}", fn
+
 module.exports = new Settings 'cursor-history',
   max:
     order: 11
@@ -89,6 +95,11 @@ module.exports = new Settings 'cursor-history',
     items: type: 'string'
     default: ['command-palette:toggle']
     description: 'list of commands to exclude from history tracking.'
+  keepSingleEntryPerBuffer:
+    order: 37
+    type: 'boolean'
+    default: false
+    description: 'Keep latest entry only per buffer'
   debug:
     order: 99
     type: 'boolean'

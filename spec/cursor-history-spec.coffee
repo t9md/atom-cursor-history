@@ -1,5 +1,6 @@
 _ = require 'underscore-plus'
 {Point} = require 'atom'
+settings = require '../lib/settings'
 
 getEditor = ->
   atom.workspace.getActiveTextEditor()
@@ -102,10 +103,9 @@ describe "cursor-history", ->
         expect(e2).toBeEqualEntry point: [10, 0], URI: pathSample1
         expect(e3).toBeEqualEntry point: [5, 5], URI: pathSample1
 
-    xit "save history when mouseclick", ->
     describe "rowDeltaToRemember settings", ->
       beforeEach ->
-        atom.config.set('cursor-history.rowDeltaToRemember', 1)
+        settings.set('rowDeltaToRemember', 1)
 
       describe "when set to 1", ->
         it "save history when cursor move over 1 line", ->
@@ -246,7 +246,7 @@ describe "cursor-history", ->
 
         describe "excludeClosedBuffer setting is true", ->
           beforeEach ->
-            atom.config.set('cursor-history.excludeClosedBuffer', true)
+            settings.set('excludeClosedBuffer', true)
 
           it "skip entry for destroyed editor", ->
             expect(getValidEntries()).toHaveLength 2
@@ -264,6 +264,30 @@ describe "cursor-history", ->
             expect(getValidEntries()).toHaveLength 3
             expect(getEntries()).toHaveLength 3
 
+      describe "keepSingleEntryPerBuffer settings", ->
+        describe "when set to true", ->
+          it "keep only latest entry per buffer and remove other entries", ->
+            expect(getEntries()).toHaveLength 4
+            settings.set('keepSingleEntryPerBuffer', true)
+            expect(getEntries()).toHaveLength 2
+            entries = getEntries()
+            expect(entries[0].URI).toBe(pathSample1)
+            expect(entries[0].point).toEqual([5, 0])
+            expect(entries[1].URI).toBe(pathSample2)
+            expect(entries[1].point).toEqual([5, 0])
+
+          it "keep only latest entry per buffer and remove other entries", ->
+            expect(getEntries()).toHaveLength 4
+            settings.set('keepSingleEntryPerBuffer', true)
+            expect(getEntries()).toHaveLength 2
+            expect(editor2.getCursorBufferPosition()).toEqual([10, 0])
+            dispatchCommand editorElement2, 'test:move-up-5'
+            entries = getEntries()
+            expect(entries).toHaveLength 2
+            expect(main.history.index).toBe 2
+            expect(entries[1].URI).toBe(pathSample2)
+            expect(entries[1].point).toEqual([10, 0])
+
     describe "ignoreCommands setting", ->
       [editor2, editorElement2] = []
       beforeEach ->
@@ -278,7 +302,7 @@ describe "cursor-history", ->
 
       describe "ignoreCommands is empty", ->
         it "save cursor position to history when editor lost focus", ->
-          atom.config.set('cursor-history.ignoreCommands', [])
+          settings.set('ignoreCommands', [])
           runs -> atom.commands.dispatch editorElement, 'test:open-sample2'
           spyOn(main, "checkLocationChange").andCallThrough()
           waitsFor -> main.checkLocationChange.callCount is 1
@@ -290,7 +314,7 @@ describe "cursor-history", ->
 
       describe "ignoreCommands is set and match command name", ->
         it "won't save cursor position to history when editor lost focus", ->
-          atom.config.set('cursor-history.ignoreCommands', ["test:open-sample2"])
+          settings.set('ignoreCommands', ["test:open-sample2"])
           spyOn(main, "getLocation").andCallThrough()
           runs -> atom.commands.dispatch editorElement, 'test:open-sample2'
           waitsFor -> editorElement2?.hasFocus() is true
