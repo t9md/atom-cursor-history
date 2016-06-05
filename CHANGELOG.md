@@ -1,3 +1,9 @@
+## 0.6.0
+- New: `keepSingleEntryPerBuffer` config option.
+- Internal: Remove dependency to `atom-config-plus` node module.
+- Improve: Add style support when `editor.useShadowDOM` was `false`.
+
+
 ## 0.5.9
 - FIX: Warning from Atom v1.2.0
 
