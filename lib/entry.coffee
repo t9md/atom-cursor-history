@@ -1,5 +1,5 @@
 {CompositeDisposable} = require 'atom'
-fs       = require 'fs'
+fs = require 'fs'
 settings = require './settings'
 path = null
 

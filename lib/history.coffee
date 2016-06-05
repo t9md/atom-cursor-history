@@ -21,7 +21,7 @@ class History
   isIndexAtHead: ->
     @index is @entries.length
 
-  findIndex: (direction, URI=null) ->
+  findIndex: (direction, fn) ->
     [start, indexes] = switch direction
       when 'next' then [start=(@index + 1), [start..(@entries.length - 1)]]
       when 'prev' then [start=(@index - 1), [start..0]]
@@ -29,17 +29,12 @@ class History
     # Check if valid index range
     return null unless (0 <= start <= (@entries.length - 1))
 
-    for index in indexes
-      entry = @entries[index]
-      continue unless entry.isValid()
-      if URI?
-        return index if (entry.URI is URI)
-      else
-        return index
+    for index in indexes when (entry = @entries[index]).isValid()
+      return index if fn(entry)
+    null
 
-  get: (direction, {URI}={}) ->
-    index = @findIndex(direction, URI)
-    if index?
+  get: (direction, fn) ->
+    if (index = @findIndex(direction, fn))?
       @entries[@index=index]
 
   # History concatenation mimicking Vim's way.

@@ -3,8 +3,8 @@
 _ = require 'underscore-plus'
 path = require 'path'
 
-History  = null
-Flasher  = null
+History = null
+Flasher = null
 settings = require './settings'
 
 ignoreCommands = [
@@ -129,9 +129,15 @@ module.exports =
   jump: (direction, {withinEditor}={}) ->
     return unless editor = atom.workspace.getActiveTextEditor()
     needToSave = (direction is 'prev') and @history.isIndexAtHead()
-    forURI = if withinEditor then editor.getURI() else null
-    unless entry = @history.get(direction, URI: forURI)
-      return
+    entry = do =>
+      switch
+        when withinEditor
+          uri = editor.getURI()
+          @history.get(direction, (e) -> e.URI is uri)
+        else
+          @history.get(direction, -> true)
+
+    return unless entry?
     # FIXME, Explicitly preserve point, URI by setting independent value,
     # since its might be set null if entry.isAtSameRow()
     {point, URI} = entry
