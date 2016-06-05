@@ -37,7 +37,7 @@ class History
   isAtHead: ->
     @index is @entries.length
 
-  setIndexToHead: ->
+  setToHead: ->
     @index = @entries.length
 
   # History concatenation mimicking Vim's way.
@@ -123,7 +123,7 @@ class History
     if removeCount > 0
       removed = @entries.splice(0, removeCount)
       e.destroy() for e in removed
-    @setIndexToHead()
+    @setToHead()
 
   inspect: (msg) ->
     ary =

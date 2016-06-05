@@ -1,11 +1,12 @@
 # Refactoring Status: 90%
-{CompositeDisposable, Disposable, Emitter} = require 'atom'
+{CompositeDisposable, Disposable, Emitter, Range} = require 'atom'
 _ = require 'underscore-plus'
 path = require 'path'
 
 History = null
-Flasher = null
 settings = require './settings'
+flashTimer = null
+flashMarker = null
 
 ignoreCommands = [
   'cursor-history:next',
@@ -19,13 +20,10 @@ module.exports =
   config: settings.config
   history: null
   subscriptions: null
-  rowDeltaToRemember: null
-  searchAllPanes: null
 
   activate: ->
     @subscriptions = new CompositeDisposable
     History = require './history'
-    Flasher = require './flasher'
     @history = new History
     @emitter = new Emitter
 
@@ -40,15 +38,12 @@ module.exports =
     uniqueByBuffer = (newValue) =>
       @history.uniqueByBuffer() if newValue
     @subscriptions.add(settings.observe('keepSingleEntryPerBuffer', uniqueByBuffer))
-    @subscriptions.add(settings.observe('rowDeltaToRemember', (@rowDeltaToRemember) =>))
-    @subscriptions.add(settings.observe('searchAllPanes', (@searchAllPanes) =>))
-
 
     @observeMouse()
     @observeCommands()
 
     saveHistoryIfNeeded = ({oldLocation, newLocation}) =>
-      if @needRemember(oldLocation.point, newLocation.point)
+      if @needToRemember(oldLocation.point, newLocation.point)
         @saveHistory(oldLocation, subject: "Cursor moved")
     @onDidChangeLocation(saveHistoryIfNeeded)
 
@@ -58,40 +53,38 @@ module.exports =
   deactivate: ->
     @subscriptions.dispose()
     @history?.destroy()
-    {@history, @rowDeltaToRemember, @searchAllPanes, @subscriptions} = {}
+    {@history, @subscriptions} = {}
 
-  needRemember: (oldPoint, newPoint) ->
-    Math.abs(oldPoint.row - newPoint.row) > @rowDeltaToRemember
+  needToRemember: (oldPoint, newPoint) ->
+    Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
 
-  saveHistory: (location, {subject, setIndexToHead}={}) ->
+  saveHistory: (location, {subject, setToHead}={}) ->
     @history.add(location)
-    if setIndexToHead ? true
-      # Only when setIndexToHead is true, we can safely remove @entries.
-      @history.removeEntries()
-    if settings.get('debug')
-      @logHistory("#{subject} [#{location.type}]")
+    # Only when setToHead is true, we can safely remove @entries.
+    @history.removeEntries() if (setToHead ? true)
+    @logHistory("#{subject} [#{location.type}]") if settings.get('debug')
 
   # Mouse handling is not primal purpose of this package
   # I dont' use mouse basically while coding.
-  # So keep codebase minimal and simple,
-  #  I don't use editor::onDidChangeCursorPosition() to track
-  #  cursor position change caused by mouse click.
+  # So to keep codebase minimal and simple,
+  #  I don't use editor::onDidChangeCursorPosition() to track cursor position change
+  #  caused by mouse click.
   #
   # When mouse clicked, cursor position is updated by atom core using setCursorScreenPosition()
   # To track cursor position change caused by mouse click, I use mousedown event.
   #  - Event capture phase: Cursor position is not yet changed.
   #  - Event bubbling phase: Cursor position updated to clicked position.
   observeMouse: ->
-    locationStack = []
+    stack = []
     handleCapture = ({target}) =>
-      return unless target.getModel?()?.getURI?()?
-      return unless editor = atom.workspace.getActiveTextEditor()
-      locationStack.push(@newLocation('mousedown', editor))
+      model = target.getModel?()
+      return unless model?.getURI()?
+      stack.push(@newLocation('mousedown', model))
 
     handleBubble = ({target}) =>
       return unless target.getModel?()?.getURI?()?
       setTimeout =>
-        @checkLocationChange(locationStack.pop()) if locationStack.length
+        @checkLocationChange(stack.pop())
       , 100
 
     workspaceElement = atom.views.getView(atom.workspace)
@@ -109,11 +102,11 @@ module.exports =
     shouldSaveLocation = (type, target) ->
       (':' in type) and target.getModel?()?.getURI?()?
 
-    locationStack = []
+    stack = []
     saveLocation = _.debounce (type, target) =>
       return unless shouldSaveLocation(type, target)
       # console.log  "WillDispatch: #{type}"
-      locationStack.push @newLocation(type, target.getModel())
+      stack.push(@newLocation(type, target.getModel()))
     , 100, true
 
     @subscriptions.add atom.commands.onWillDispatch ({type, target}) =>
@@ -122,15 +115,16 @@ module.exports =
 
     @subscriptions.add atom.commands.onDidDispatch ({type, target}) =>
       return if @isIgnoreCommands(type)
-      return if locationStack.length is 0
+      return if stack.length is 0
       return unless shouldSaveLocation(type, target)
       # console.log  "DidDispatch: #{type}"
       setTimeout =>
-        @checkLocationChange(locationStack.pop()) if locationStack.length
+        @checkLocationChange(stack.pop())
       , 100
 
   checkLocationChange: (oldLocation) ->
-    return unless editor = atom.workspace.getActiveTextEditor()
+    return unless oldLocation?
+    return unless editor = @getEditor()
     editorElement = atom.views.getView(editor)
     if editorElement.hasFocus() and (editor.getURI() is oldLocation.URI)
       newLocation = @newLocation(oldLocation.type, editor)
@@ -139,9 +133,8 @@ module.exports =
       @saveHistory(oldLocation, subject: "Save on focus lost")
 
   jump: (direction, {withinEditor}={}) ->
-    editor = atom.workspace.getActiveTextEditor()
-    return unless editor?
-    needToSave = (direction is 'prev') and @history.isAtHead()
+    return unless (editor = @getEditor())?
+    wasAtHead = @history.isAtHead()
     entry = do =>
       switch
         when withinEditor
@@ -155,33 +148,42 @@ module.exports =
     # since its might be set null if entry.isAtSameRow()
     {point, URI} = entry
 
-    if needToSave
+    needToLog = true
+    if (direction is 'prev') and wasAtHead
       location = @newLocation('prev', editor)
-      @saveHistory(location, setIndexToHead: false, subject: "Save head position")
+      @saveHistory(location, setToHead: false, subject: "Save head position")
+      needToLog = false
 
     land = (editor) =>
-      @land(editor, {point, direction, log: not needToSave})
+      @land(editor, {point, direction, needToLog})
 
-    openEditor = =>
+    openEditor = ->
       if editor.getURI is URI
         Promise.resolve(editor)
       else
-        atom.workspace.open(URI, {@searchAllPanes})
+        atom.workspace.open(URI, searchAllPanes: settings.get('searchAllPanes'))
 
     openEditor().then(land)
 
 
-  land: (editor, {point, direction, log}) ->
+  land: (editor, {point, direction, needToLog}) ->
     editor.setCursorBufferPosition(point)
     editor.scrollToCursorPosition({center: true})
-    Flasher.flash() if settings.get('flashOnLand')
 
-    if settings.get('debug') and log
+    if settings.get('flashOnLand')
+      @flash(
+        flashType: settings.get('flashType')
+        className: "cursor-history-#{settings.get('flashColor')}"
+        timeout: settings.get('flashDurationMilliSeconds')
+      )
+
+    if settings.get('debug') and needToLog
       @logHistory(direction)
 
   newLocation: (type, editor) ->
     {
-      type, editor,
+      type,
+      editor,
       point: editor.getCursorBufferPosition(),
       URI: editor.getURI()
     }
@@ -192,3 +194,31 @@ module.exports =
     #{@history.inspect()}
     """
     console.log s, "\n\n"
+
+  getEditor: ->
+    atom.workspace.getActiveTextEditor()
+
+  flash: ({flashType, className, timeout}) ->
+    flashMarker?.destroy()
+    clearTimeout(flashTimer)
+
+    editor = @getEditor()
+    cursor = editor.getLastCursor()
+    switch flashType
+      when 'line'
+        type = 'line'
+        range = cursor.getCurrentLineBufferRange()
+      when 'word'
+        type = 'highlight'
+        range = cursor.getCurrentWordBufferRange()
+      when 'point'
+        type = 'highlight'
+        range = Range.fromPointWithDelta(cursor.getCursorBufferPosition(), 0, 1)
+
+    flashMarker = editor.markBufferRange(range, invalidate: 'never')
+    decoration = editor.decorateMarker(flashMarker, {type, class: className})
+
+    clearFlash = ->
+      flashMarker.destroy()
+      flashTimer = null
+    flashTimer = setTimeout(clearFlash, timeout)

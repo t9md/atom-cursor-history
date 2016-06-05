@@ -1,4 +1,6 @@
 class Settings
+  cache: {}
+
   constructor: (@scope, @config) ->
 
   notifyAndDelete: (params...) ->
@@ -32,8 +34,11 @@ class Settings
   delete: (param) ->
     @set(param, undefined)
 
+  setCachableParams: (params) ->
+    @cachableParams = params
+
   get: (param) ->
-    atom.config.get "#{@scope}.#{param}"
+    atom.config.get("#{@scope}.#{param}")
 
   set: (param, value) ->
     atom.config.set "#{@scope}.#{param}", value
