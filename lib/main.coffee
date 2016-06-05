@@ -56,7 +56,10 @@ module.exports =
     {@history, @subscriptions} = {}
 
   needToRemember: (oldPoint, newPoint) ->
-    Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
+    if oldPoint.row is newPoint.row
+      Math.abs(oldPoint.column - newPoint.column) > settings.get('columnDeltaToRemember')
+    else
+      Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
 
   saveHistory: (location, {subject, setToHead}={}) ->
     @history.add(location)
@@ -78,7 +81,7 @@ module.exports =
     stack = []
     handleCapture = ({target}) =>
       model = target.getModel?()
-      return unless model?.getURI()?
+      return unless model?.getURI?()
       stack.push(@newLocation('mousedown', model))
 
     handleBubble = ({target}) =>
@@ -167,10 +170,11 @@ module.exports =
 
 
   land: (editor, {point, direction, needToLog}) ->
+    originalRow = editor.getCursorBufferPosition().row
     editor.setCursorBufferPosition(point)
     editor.scrollToCursorPosition({center: true})
 
-    if settings.get('flashOnLand')
+    if settings.get('flashOnLand') and (originalRow isnt point.row)
       @flash(
         flashType: settings.get('flashType')
         className: "cursor-history-#{settings.get('flashColor')}"

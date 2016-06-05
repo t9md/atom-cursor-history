@@ -61,14 +61,20 @@ module.exports = new Settings 'cursor-history',
     type: 'integer'
     default: 4
     minimum: 0
-    description: "Only if dirrerence of cursor row exceed this value, cursor position is saved to history"
-  excludeClosedBuffer:
+    description: "Save history when row delta was greater than this value"
+  columnDeltaToRemember:
     order: 13
+    type: 'integer'
+    default: 9999
+    minimum: 0
+    description: "Save history when cursor moved in same row and column delta was greater than this value"
+  excludeClosedBuffer:
+    order: 14
     type: 'boolean'
     default: false
     description: "Don't open closed Buffer on history excursion"
   keepSingleEntryPerBuffer:
-    order: 14
+    order: 15
     type: 'boolean'
     default: false
     description: 'Keep latest entry only per buffer'
