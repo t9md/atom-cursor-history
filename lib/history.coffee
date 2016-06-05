@@ -91,8 +91,17 @@ class History
   #
   add: ({editor, point, URI}, {setIndexToHead}={}) ->
     newEntry = new Entry(editor, point, URI)
-    e.destroy() for e in @entries when e.isAtSameRow(newEntry)
+    if (settings.get('onlyBufferFiles'))
+      index = @entries.length - 1
+      entry = @entries[index]
+      if entry and (entry.URI is URI)
+        @entries.splice(index, 1)
+    else
+      e.destroy() for e in @entries when e.isAtSameRow(newEntry)
+
     @entries.push newEntry
+
+
 
     if setIndexToHead ? true
       # Only when setIndexToHead is true, we can safely remove @entries.
