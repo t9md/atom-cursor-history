@@ -19,17 +19,19 @@ module.exports =
   config: settings.config
   history: null
   subscriptions: null
+  rowDeltaToRemember: null
+  searchAllPanes: null
 
   activate: ->
     @subscriptions = new CompositeDisposable
-    History  = require './history'
-    Flasher  = require './flasher'
+    History = require './history'
+    Flasher = require './flasher'
     @history = new History
     @emitter = new Emitter
 
     @subscriptions.add atom.commands.add 'atom-workspace',
-      'cursor-history:next':  => @jump('next')
-      'cursor-history:prev':  => @jump('prev')
+      'cursor-history:next': => @jump('next')
+      'cursor-history:prev': => @jump('prev')
       'cursor-history:next-within-editor': => @jump('next', withinEditor: true)
       'cursor-history:prev-within-editor': => @jump('prev', withinEditor: true)
       'cursor-history:clear': => @history.clear()
@@ -37,31 +39,37 @@ module.exports =
 
     uniqueByBuffer = (newValue) =>
       @history.uniqueByBuffer() if newValue
-    @subscriptions.add settings.observe('keepSingleEntryPerBuffer', uniqueByBuffer)
+    @subscriptions.add(settings.observe('keepSingleEntryPerBuffer', uniqueByBuffer))
+    @subscriptions.add(settings.observe('rowDeltaToRemember', (@rowDeltaToRemember) =>))
+    @subscriptions.add(settings.observe('searchAllPanes', (@searchAllPanes) =>))
+
 
     @observeMouse()
     @observeCommands()
 
-    @onDidChangeLocation ({oldLocation, newLocation}) =>
+    saveHistoryIfNeeded = ({oldLocation, newLocation}) =>
       if @needRemember(oldLocation.point, newLocation.point)
-        @saveHistory oldLocation, subject: "Cursor moved"
+        @saveHistory(oldLocation, subject: "Cursor moved")
+    @onDidChangeLocation(saveHistoryIfNeeded)
 
   onDidChangeLocation: (fn) ->
-    @emitter.on 'did-change-location', fn
+    @emitter.on('did-change-location', fn)
 
   deactivate: ->
     @subscriptions.dispose()
-    @subscriptions = null
     @history?.destroy()
-    @history = null
+    {@history, @rowDeltaToRemember, @searchAllPanes, @subscriptions} = {}
 
   needRemember: (oldPoint, newPoint) ->
-    Math.abs(oldPoint.row - newPoint.row) > settings.get('rowDeltaToRemember')
+    Math.abs(oldPoint.row - newPoint.row) > @rowDeltaToRemember
 
   saveHistory: (location, {subject, setIndexToHead}={}) ->
-    @history.add location, {setIndexToHead}
+    @history.add(location)
+    if setIndexToHead ? true
+      # Only when setIndexToHead is true, we can safely remove @entries.
+      @history.removeEntries()
     if settings.get('debug')
-      @logHistory "#{subject} [#{location.type}]"
+      @logHistory("#{subject} [#{location.type}]")
 
   # Mouse handling is not primal purpose of this package
   # I dont' use mouse basically while coding.
@@ -78,7 +86,7 @@ module.exports =
     handleCapture = ({target}) =>
       return unless target.getModel?()?.getURI?()?
       return unless editor = atom.workspace.getActiveTextEditor()
-      locationStack.push @getLocation('mousedown', editor)
+      locationStack.push(@newLocation('mousedown', editor))
 
     handleBubble = ({target}) =>
       return unless target.getModel?()?.getURI?()?
@@ -87,12 +95,12 @@ module.exports =
       , 100
 
     workspaceElement = atom.views.getView(atom.workspace)
-    workspaceElement.addEventListener 'mousedown', handleCapture, true
-    workspaceElement.addEventListener 'mousedown', handleBubble, false
+    workspaceElement.addEventListener('mousedown', handleCapture, true)
+    workspaceElement.addEventListener('mousedown', handleBubble, false)
 
     @subscriptions.add new Disposable ->
-      workspaceElement.removeEventListener 'mousedown', handleCapture, true
-      workspaceElement.removeEventListener 'mousedown', handleBubble, false
+      workspaceElement.removeEventListener('mousedown', handleCapture, true)
+      workspaceElement.removeEventListener('mousedown', handleBubble, false)
 
   isIgnoreCommands: (command) ->
     (command in ignoreCommands) or (command in settings.get('ignoreCommands'))
@@ -105,7 +113,7 @@ module.exports =
     saveLocation = _.debounce (type, target) =>
       return unless shouldSaveLocation(type, target)
       # console.log  "WillDispatch: #{type}"
-      locationStack.push @getLocation(type, target.getModel())
+      locationStack.push @newLocation(type, target.getModel())
     , 100, true
 
     @subscriptions.add atom.commands.onWillDispatch ({type, target}) =>
@@ -125,13 +133,14 @@ module.exports =
     return unless editor = atom.workspace.getActiveTextEditor()
     editorElement = atom.views.getView(editor)
     if editorElement.hasFocus() and (editor.getURI() is oldLocation.URI)
-      newLocation = @getLocation(oldLocation.type, editor)
-      @emitter.emit 'did-change-location', {oldLocation, newLocation}
+      newLocation = @newLocation(oldLocation.type, editor)
+      @emitter.emit('did-change-location', {oldLocation, newLocation})
     else
-      @saveHistory oldLocation, subject: "Save on focus lost"
+      @saveHistory(oldLocation, subject: "Save on focus lost")
 
   jump: (direction, {withinEditor}={}) ->
-    return unless editor = atom.workspace.getActiveTextEditor()
+    editor = atom.workspace.getActiveTextEditor()
+    return unless editor?
     needToSave = (direction is 'prev') and @history.isAtHead()
     entry = do =>
       switch
@@ -147,17 +156,20 @@ module.exports =
     {point, URI} = entry
 
     if needToSave
-      @saveHistory @getLocation('prev', editor),
-        setIndexToHead: false
-        subject: "Save head position"
+      location = @newLocation('prev', editor)
+      @saveHistory(location, setIndexToHead: false, subject: "Save head position")
 
-    options = {point, direction, log: not needToSave}
-    if editor.getURI() is URI
-      @land(editor, options)
-    else
-      searchAllPanes = settings.get('searchAllPanes')
-      atom.workspace.open(URI, {searchAllPanes}).then (editor) =>
-        @land(editor, options)
+    land = (editor) =>
+      @land(editor, {point, direction, log: not needToSave})
+
+    openEditor = =>
+      if editor.getURI is URI
+        Promise.resolve(editor)
+      else
+        atom.workspace.open(URI, {@searchAllPanes})
+
+    openEditor().then(land)
+
 
   land: (editor, {point, direction, log}) ->
     editor.setCursorBufferPosition(point)
@@ -167,7 +179,7 @@ module.exports =
     if settings.get('debug') and log
       @logHistory(direction)
 
-  getLocation: (type, editor) ->
+  newLocation: (type, editor) ->
     {
       type, editor,
       point: editor.getCursorBufferPosition(),

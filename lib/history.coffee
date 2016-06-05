@@ -18,9 +18,6 @@ class History
     e.destroy() for e in @entries
     {@index, @entries} = {}
 
-  isAtHead: ->
-    @index is @entries.length
-
   findIndex: (direction, fn) ->
     [start, indexes] = switch direction
       when 'next' then [start=(@index + 1), [start..(@entries.length - 1)]]
@@ -36,6 +33,12 @@ class History
   get: (direction, fn) ->
     if (index = @findIndex(direction, fn))?
       @entries[@index=index]
+
+  isAtHead: ->
+    @index is @entries.length
+
+  setIndexToHead: ->
+    @index = @entries.length
 
   # History concatenation mimicking Vim's way.
   # newEntry(=old position from where you jump to land here) is
@@ -89,7 +92,7 @@ class History
   #    newEntry(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: ({editor, point, URI}, {setIndexToHead}={}) ->
+  add: ({editor, point, URI}) ->
     newEntry = new Entry(editor, point, URI)
 
     if settings.get('keepSingleEntryPerBuffer')
@@ -97,11 +100,7 @@ class History
     else
       e.destroy() for e in @entries when e.isAtSameRow(newEntry)
 
-    @entries.push newEntry
-    if setIndexToHead ? true
-      # Only when setIndexToHead is true, we can safely remove @entries.
-      @removeEntries()
-      @index = @entries.length
+    @entries.push(newEntry)
 
   uniqueByBuffer: ->
     return unless @entries.length
@@ -124,6 +123,7 @@ class History
     if removeCount > 0
       removed = @entries.splice(0, removeCount)
       e.destroy() for e in removed
+    @setIndexToHead()
 
   inspect: (msg) ->
     ary =

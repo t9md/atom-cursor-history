@@ -315,8 +315,8 @@ describe "cursor-history", ->
       describe "ignoreCommands is set and match command name", ->
         it "won't save cursor position to history when editor lost focus", ->
           settings.set('ignoreCommands', ["test:open-sample2"])
-          spyOn(main, "getLocation").andCallThrough()
+          spyOn(main, "newLocation").andCallThrough()
           runs -> atom.commands.dispatch editorElement, 'test:open-sample2'
           waitsFor -> editorElement2?.hasFocus() is true
           runs ->
-            expect(main.getLocation.callCount).toBe 0
+            expect(main.newLocation.callCount).toBe 0
