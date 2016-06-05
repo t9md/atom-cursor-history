@@ -62,6 +62,11 @@ module.exports = new Settings 'cursor-history',
     type: 'boolean'
     default: false
     description: "Don't open closed Buffer on history excursion"
+  keepSingleEntryPerBuffer:
+    order: 14
+    type: 'boolean'
+    default: false
+    description: 'Keep latest entry only per buffer'
   searchAllPanes:
     order: 31
     type: 'boolean'
@@ -95,11 +100,6 @@ module.exports = new Settings 'cursor-history',
     items: type: 'string'
     default: ['command-palette:toggle']
     description: 'list of commands to exclude from history tracking.'
-  keepSingleEntryPerBuffer:
-    order: 37
-    type: 'boolean'
-    default: false
-    description: 'Keep latest entry only per buffer'
   debug:
     order: 99
     type: 'boolean'
