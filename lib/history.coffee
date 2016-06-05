@@ -18,7 +18,7 @@ class History
     e.destroy() for e in @entries
     {@index, @entries} = {}
 
-  isIndexAtHead: ->
+  isAtHead: ->
     @index is @entries.length
 
   findIndex: (direction, fn) ->

@@ -132,7 +132,7 @@ module.exports =
 
   jump: (direction, {withinEditor}={}) ->
     return unless editor = atom.workspace.getActiveTextEditor()
-    needToSave = (direction is 'prev') and @history.isIndexAtHead()
+    needToSave = (direction is 'prev') and @history.isAtHead()
     entry = do =>
       switch
         when withinEditor
