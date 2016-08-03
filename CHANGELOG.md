@@ -1,3 +1,6 @@
+## 0.6.1
+- Fix: Deprecation warning in Atom v1.10(passing lifetime options when creating marker is deprecated).
+
 ## 0.6.0
 - New: `keepSingleEntryPerBuffer` config option.
 - Internal: Remove dependency to `atom-config-plus` node module.

@@ -13,10 +13,7 @@ class Entry
 
     @editor = editor
     @subscriptions = new CompositeDisposable
-    @marker = @editor.markBufferPosition @point,
-      invalidate: 'never'
-      persistent: false
-
+    @marker = @editor.markBufferPosition(@point)
     @subscriptions.add @marker.onDidChange ({newHeadBufferPosition}) =>
       @point = newHeadBufferPosition
 

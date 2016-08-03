@@ -219,7 +219,7 @@ module.exports =
         type = 'highlight'
         range = Range.fromPointWithDelta(cursor.getCursorBufferPosition(), 0, 1)
 
-    flashMarker = editor.markBufferRange(range, invalidate: 'never')
+    flashMarker = editor.markBufferRange(range)
     decoration = editor.decorateMarker(flashMarker, {type, class: className})
 
     clearFlash = ->
