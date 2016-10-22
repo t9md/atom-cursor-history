@@ -50,13 +50,11 @@ module.exports =
     @history = new History
     @emitter = new Emitter
 
-    # @subscriptions.add atom.commands.add 'atom-workspace',
-    # @subscriptions.add atom.commands.add 'atom-workspace',
     @subscriptions.add atom.commands.add 'atom-text-editor',
-      'cursor-history:next': ({target}) => @jump(target.getModel(), 'next')
-      'cursor-history:prev': ({target}) => @jump(target.getModel(), 'prev')
-      'cursor-history:next-within-editor': ({target}) => @jump(target.getModel(), 'next', withinEditor: true)
-      'cursor-history:prev-within-editor': ({target}) => @jump(target.getModel(), 'prev', withinEditor: true)
+      'cursor-history:next': ({target}) => @jump(target, 'next')
+      'cursor-history:prev': ({target}) => @jump(target, 'prev')
+      'cursor-history:next-within-editor': ({target}) => @jump(target, 'next', withinEditor: true)
+      'cursor-history:prev-within-editor': ({target}) => @jump(target, 'prev', withinEditor: true)
       'cursor-history:clear': => @history.clear()
       'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
@@ -153,7 +151,8 @@ module.exports =
     else
       @emitter.emit('did-unfocus', {oldLocation})
 
-  jump: (editor, direction, {withinEditor}={}) ->
+  jump: (editorElement, direction, {withinEditor}={}) ->
+    editor = editorElement.getModel()
     wasAtHead = @history.isAtHead()
     if withinEditor
       entry = @history.get(direction, URI: editor.getURI())
