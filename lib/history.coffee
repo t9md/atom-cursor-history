@@ -30,7 +30,11 @@ class History
       return index if fn(entry)
     null
 
-  get: (direction, fn) ->
+  get: (direction, {URI}={}) ->
+    if URI?
+      fn = (entry) -> entry.URI is URI
+    else
+      fn = -> true
     if (index = @findIndex(direction, fn))?
       @entries[@index=index]
 
@@ -92,7 +96,8 @@ class History
   #    newEntry(row=7) is appended to end of @entries.
   #    No special @index adjustment.
   #
-  add: ({editor, point, URI}) ->
+  add: (location, {setToHead}={}) ->
+    {editor, point, URI} = location
     newEntry = new Entry(editor, point, URI)
 
     if settings.get('keepSingleEntryPerBuffer')
@@ -101,6 +106,11 @@ class History
       e.destroy() for e in @entries when e.isAtSameRow(newEntry)
 
     @entries.push(newEntry)
+    # Only when we are allowed to modify index, we can safely remove @entries.
+    setToHead ?= true
+    if setToHead
+      @removeInvalidEntries()
+      @setToHead()
 
   uniqueByBuffer: ->
     return unless @entries.length
@@ -111,9 +121,10 @@ class History
         entry.destroy()
       else
         buffers.push(URI)
-    @removeEntries()
+    @removeInvalidEntries()
+    @setToHead()
 
-  removeEntries: ->
+  removeInvalidEntries: ->
     # Scrub invalid
     e.destroy() for e in @entries when not e.isValid()
     @entries = (e for e in @entries when e.isValid())
@@ -123,7 +134,6 @@ class History
     if removeCount > 0
       removed = @entries.splice(0, removeCount)
       e.destroy() for e in removed
-    @setToHead()
 
   inspect: (msg) ->
     ary =

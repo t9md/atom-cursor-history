@@ -1,8 +1,12 @@
 _ = require 'underscore-plus'
+{CompositeDisposable} = require 'atom'
+
 class Settings
   cache: {}
 
   constructor: (@scope, @config) ->
+    @disposables = new CompositeDisposable
+
     # Inject order props to display orderd in setting-view
     for name, i in Object.keys(@config)
       @config[name].order = i
@@ -13,6 +17,9 @@ class Settings
         when typeof(object.default) is 'boolean' then 'boolean'
         when typeof(object.default) is 'string' then 'string'
         when Array.isArray(object.default) then 'array'
+
+  destroy: ->
+    @disposables.dispose()
 
   notifyAndDelete: (params...) ->
     paramsToDelete = (param for param in params when @has(param))
@@ -58,7 +65,7 @@ class Settings
     @set(param, not @get(param))
 
   observe: (param, fn) ->
-    atom.config.observe "#{@scope}.#{param}", fn
+    @disposables.add(atom.config.observe("#{@scope}.#{param}", fn))
 
 module.exports = new Settings 'cursor-history',
   max:

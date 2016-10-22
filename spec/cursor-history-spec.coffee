@@ -313,10 +313,24 @@ describe "cursor-history", ->
             expect(getEntries('last')).toBeEqualEntry point: [1, 2], URI: pathSample1
 
       describe "ignoreCommands is set and match command name", ->
-        it "won't save cursor position to history when editor lost focus", ->
-          settings.set('ignoreCommands', ["test:open-sample2"])
-          spyOn(main, "newLocation").andCallThrough()
-          runs -> atom.commands.dispatch editorElement, 'test:open-sample2'
-          waitsFor -> editorElement2?.hasFocus() is true
-          runs ->
-            expect(main.newLocation.callCount).toBe 0
+        locationStackLength = null
+        dispatchOpenSample2Command = ->
+          promise = new Promise (resolve) ->
+            atom.commands.onWillDispatch ({type}) ->
+              type is 'test:open-sample2'
+              locationStackLength = main.locationStackForTestSpec.length
+              resolve()
+          atom.commands.dispatch editorElement, 'test:open-sample2'
+          promise
+
+        beforeEach ->
+          locationStackLength = null
+
+        it "track location change when editor lost focus", ->
+          waitsForPromise -> dispatchOpenSample2Command()
+          runs -> expect(locationStackLength).toBe 1
+
+        it "Doesn't track location change when editor lost focus", ->
+          settings.set('ignoreCommands', ['test:open-sample2'])
+          waitsForPromise -> dispatchOpenSample2Command()
+          runs -> expect(locationStackLength).toBe 0
