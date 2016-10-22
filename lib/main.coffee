@@ -1,4 +1,3 @@
-# Refactoring Status: 90%
 {CompositeDisposable, Disposable, Emitter, Range} = require 'atom'
 _ = require 'underscore-plus'
 path = require 'path'
@@ -15,6 +14,16 @@ ignoreCommands = [
   'cursor-history:prev-within-editor',
   'cursor-history:clear',
 ]
+
+isTextEditor = (object) ->
+  atom.workspace.isTextEditor(object)
+
+getEditor =  ->
+  atom.workspace.getActiveTextEditor()
+
+findEditorForPaneByURI = (pane, URI) ->
+  for item in pane.getItems() when isTextEditor(item)
+    return item if item.getURI() is URI
 
 module.exports =
   config: settings.config
@@ -127,24 +136,20 @@ module.exports =
 
   checkLocationChange: (oldLocation) ->
     return unless oldLocation?
-    return unless editor = @getEditor()
-    editorElement = atom.views.getView(editor)
-    if editorElement.hasFocus() and (editor.getURI() is oldLocation.URI)
+    return unless editor = getEditor()
+    if editor.element.hasFocus() and (editor.getURI() is oldLocation.URI)
       newLocation = @newLocation(oldLocation.type, editor)
       @emitter.emit('did-change-location', {oldLocation, newLocation})
     else
       @saveHistory(oldLocation, subject: "Save on focus lost")
 
   jump: (direction, {withinEditor}={}) ->
-    return unless (editor = @getEditor())?
+    return unless editor = getEditor()
     wasAtHead = @history.isAtHead()
-    entry = do =>
-      switch
-        when withinEditor
-          uri = editor.getURI()
-          @history.get(direction, ({URI}) -> URI is uri)
-        else
-          @history.get(direction, -> true)
+    if withinEditor
+      entry = @history.get(direction, ({URI}) -> URI is editor.getURI())
+    else
+      entry = @history.get(direction, -> true)
 
     return unless entry?
     # FIXME, Explicitly preserve point, URI by setting independent value,
@@ -160,9 +165,13 @@ module.exports =
     land = (editor) =>
       @land(editor, {point, direction, needToLog})
 
+    activePane = atom.workspace.getActivePane()
     openEditor = ->
       if editor.getURI is URI
         Promise.resolve(editor)
+      else if item = findEditorForPaneByURI(activePane, URI)
+        activePane.activateItem(item)
+        Promise.resolve(item)
       else
         atom.workspace.open(URI, searchAllPanes: settings.get('searchAllPanes'))
 
@@ -199,14 +208,11 @@ module.exports =
     """
     console.log s, "\n\n"
 
-  getEditor: ->
-    atom.workspace.getActiveTextEditor()
-
   flash: ({flashType, className, timeout}) ->
     flashMarker?.destroy()
     clearTimeout(flashTimer)
 
-    editor = @getEditor()
+    editor = getEditor()
     cursor = editor.getLastCursor()
     switch flashType
       when 'line'
