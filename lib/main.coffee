@@ -172,7 +172,9 @@ module.exports =
       needToLog = false
 
     land = (editor) =>
-      @land(editor, {point, direction, needToLog})
+      @land(editor, point)
+      if settings.get('debug') and needToLog
+        @logHistory(direction)
 
     activePane = atom.workspace.getActivePane()
     if editor.getURI() is URI
@@ -183,7 +185,7 @@ module.exports =
     else
       atom.workspace.open(URI, searchAllPanes: settings.get('searchAllPanes')).then(land)
 
-  land: (editor, {point, direction, needToLog}) ->
+  land: (editor, point) ->
     originalRow = editor.getCursorBufferPosition().row
 
     editor.setCursorBufferPosition(point, autoscroll: false)
@@ -191,9 +193,6 @@ module.exports =
 
     if settings.get('flashOnLand') and (originalRow isnt point.row)
       @flash(editor)
-
-    if settings.get('debug') and needToLog
-      @logHistory(direction)
 
   flashMarker: null
   flash: (editor) ->
