@@ -167,7 +167,8 @@ describe "cursor-history", ->
       runCommand = (command, fn) ->
         runs ->
           spyOn(main, "land").andCallThrough()
-          atom.commands.dispatch workspaceElement, command
+          target = atom.workspace.getActiveTextEditor().element
+          atom.commands.dispatch target, command
 
         waitsFor -> main.land.callCount is 1
         runs -> fn()
