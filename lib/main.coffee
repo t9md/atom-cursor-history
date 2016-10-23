@@ -99,16 +99,16 @@ module.exports =
   #  - Event capture phase: Cursor position is not yet changed.
   #  - Event bubbling phase: Cursor position updated to clicked position.
   observeMouse: ->
-    stack = []
+    locationStack = []
     handleCapture = ({target}) ->
       model = target.getModel?()
-      return unless model?.getURI?()
-      stack.push(new Location('mousedown', model))
+      if model?.getURI?()
+        locationStack.push(new Location('mousedown', model))
 
     handleBubble = ({target}) =>
       return unless target.getModel?()?.getURI?()?
       setTimeout =>
-        @checkLocationChange(location) if location = stack.pop()
+        @checkLocationChange(location) if location = locationStack.pop()
       , 100
 
     workspaceElement = atom.views.getView(atom.workspace)
