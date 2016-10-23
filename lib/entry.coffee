@@ -33,8 +33,6 @@ class Entry
   isDestroyed: ->
     @destroyed
 
-  setURI: (@URI) ->
-
   isValid: ->
     return false if @isDestroyed()
 
