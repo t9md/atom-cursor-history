@@ -1,3 +1,7 @@
+## 0.7.0
+- Improve: Cleanup codebase for readabiity and explictness.
+- Fix: When visiting history entry, it try to stick same pane(was not in previous release because of bug).
+
 ## 0.6.1
 - Fix: Deprecation warning in Atom v1.10(passing lifetime options when creating marker is deprecated).
 

@@ -71,7 +71,7 @@ module.exports = new Settings 'cursor-history',
   max:
     default: 100
     minimum: 1
-    description: "number of history to remember"
+    description: "number of history to keep"
   rowDeltaToRemember:
     default: 4
     minimum: 0
@@ -79,7 +79,7 @@ module.exports = new Settings 'cursor-history',
   columnDeltaToRemember:
     default: 9999
     minimum: 0
-    description: "Save history when cursor moved in same row and column delta was greater than this value"
+    description: "Save history when cursor moved within same row and column delta was greater than this value"
   excludeClosedBuffer:
     default: false
     description: "Don't open closed Buffer on history excursion"
@@ -88,10 +88,10 @@ module.exports = new Settings 'cursor-history',
     description: 'Keep latest entry only per buffer'
   searchAllPanes:
     default: true
-    description: "Land to another pane or stick to same pane"
+    description: "Search existing buffer from all panes before opening new editor"
   flashOnLand:
     default: false
-    description: "flash cursor line on land"
+    description: "flash cursor on land"
   flashDurationMilliSeconds:
     default: 150
     description: "Duration for flash"
@@ -109,4 +109,3 @@ module.exports = new Settings 'cursor-history',
     description: 'list of commands to exclude from history tracking.'
   debug:
     default: false
-    description: "Output history on console.log"

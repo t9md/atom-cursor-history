@@ -16,9 +16,6 @@ defaultIgnoreCommands = [
 isTextEditor = (object) ->
   atom.workspace.isTextEditor(object)
 
-getEditor =  ->
-  atom.workspace.getActiveTextEditor()
-
 findEditorForPaneByURI = (pane, URI) ->
   for item in pane.getItems() when isTextEditor(item)
     return item if item.getURI() is URI
@@ -39,8 +36,6 @@ module.exports =
   history: null
   subscriptions: null
   ignoreCommands: null
-  columnDeltaToRemember: null
-  rowDeltaToRemember: null
 
   onDidChangeLocation: (fn) -> @emitter.on('did-change-location', fn)
   onDidUnfocus: (fn) -> @emitter.on('did-unfocus', fn)
@@ -84,8 +79,8 @@ module.exports =
     settings.observe 'ignoreCommands', (newValue) =>
       @ignoreCommands = defaultIgnoreCommands.concat(newValue)
 
-  saveHistory: (location, {subject, setToHead}={}) ->
-    @history.add(location, {setToHead})
+  saveHistory: (location, {subject, setIndexToHead}={}) ->
+    @history.add(location, {setIndexToHead})
     @logHistory("#{subject} [#{location.type}]") if settings.get('debug')
 
   # Mouse handling is not primal purpose of this package
@@ -141,9 +136,11 @@ module.exports =
         , 100
 
   checkLocationChange: (oldLocation) ->
-    return unless editor = getEditor()
+    editor = atom.workspace.getActiveTextEditor()
+    return unless editor
+
     if editor.element.hasFocus() and (editor.getURI() is oldLocation.URI)
-      # move within same buffer.
+      # Move within same buffer.
       newLocation = new Location(oldLocation.type, editor)
       @emitter.emit('did-change-location', {oldLocation, newLocation})
     else
@@ -151,7 +148,7 @@ module.exports =
 
   jump: (editorElement, direction, {withinEditor}={}) ->
     editor = editorElement.getModel()
-    wasAtHead = @history.isAtHead()
+    wasAtHead = @history.isIndexAtHead()
     if withinEditor
       entry = @history.get(direction, URI: editor.getURI())
     else
@@ -165,7 +162,7 @@ module.exports =
     needToLog = true
     if (direction is 'prev') and wasAtHead
       location = new Location('prev', editor)
-      @saveHistory(location, setToHead: false, subject: "Save head position")
+      @saveHistory(location, setIndexToHead: false, subject: "Save head position")
       needToLog = false
 
     land = (editor) =>

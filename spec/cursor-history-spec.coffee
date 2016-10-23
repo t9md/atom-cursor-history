@@ -159,7 +159,7 @@ describe "cursor-history", ->
           dispatchCommand editorElement2, 'test:move-down-5'
           entries = getEntries()
           expect(entries).toHaveLength 4
-          expect(main.history.isAtHead()).toBe true
+          expect(main.history.isIndexAtHead()).toBe true
           [e0, e1, e2, e3] = entries
           expect(getEditor().getURI()).toBe pathSample2
           expect(getEditor().getCursorBufferPosition()).toEqual [10, 0]
@@ -285,7 +285,7 @@ describe "cursor-history", ->
             dispatchCommand editorElement2, 'test:move-up-5'
             entries = getEntries()
             expect(entries).toHaveLength 2
-            expect(main.history.isAtHead()).toBe true
+            expect(main.history.isIndexAtHead()).toBe true
             expect(entries[1].URI).toBe(pathSample2)
             expect(entries[1].point).toEqual([10, 0])
 
