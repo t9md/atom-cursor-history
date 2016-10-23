@@ -64,7 +64,7 @@ module.exports =
 
     @onDidChangeLocation ({oldLocation, newLocation}) =>
       {row, column} = pointDelta(oldLocation.point, newLocation.point)
-      if (row > @rowDeltaToRemember) or (row is 0 and column > @columnDeltaToRemember)
+      if (row > settings.get('rowDeltaToRemember')) or (row is 0 and column > settings.get('columnDeltaToRemember'))
         @saveHistory(oldLocation, subject: "Cursor moved")
 
     @onDidUnfocus ({oldLocation}) =>
@@ -83,8 +83,6 @@ module.exports =
 
     settings.observe 'ignoreCommands', (newValue) =>
       @ignoreCommands = defaultIgnoreCommands.concat(newValue)
-    settings.observe 'columnDeltaToRemember', (@columnDeltaToRemember) =>
-    settings.observe 'rowDeltaToRemember', (@rowDeltaToRemember) =>
 
   saveHistory: (location, {subject, setToHead}={}) ->
     @history.add(location, {setToHead})
