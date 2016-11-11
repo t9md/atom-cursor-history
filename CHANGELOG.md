@@ -1,12 +1,15 @@
+## 0.9.0
+- Fix: DEPRECATED warning. No longer use `:shadow` #11
+
 ## 0.8.1
 - Fix: More protective to find `closest('atom-text-editor')`
 
-## 0.8.0 beta only relase
+## 0.8.0 beta only release
 - Fix: #23 event.target no longer hold editorElement from v1.13.0-beta so fix it.
 - Fix: Remove use of `:shadow` #24
 
 ## 0.7.0
-- Improve: Cleanup codebase for readabiity and explictness.
+- Improve: Cleanup codebase for readability and explicitness.
 - Fix: When visiting history entry, it try to stick same pane(was not in previous release because of bug).
 
 ## 0.6.1
@@ -48,7 +51,7 @@
 ## 0.5.2 - Improve
 - Refactoring
 - Minor bugfix
-- Improve: efficient and safe removal of ivalid/destroyed entry.
+- Improve: efficient and safe removal of invalid/destroyed entry.
 
 ## 0.5.1 - Improve
 - Add delay to properly save symbols-view:go-to-declaration.
@@ -98,7 +101,7 @@
 ## 0.4.8 - Improve
 - Use `atom-config-plus`.
 - throttle saving to well fit to `symbols-view:go-to-declaration`
-- Scrooll to center on target is not current paneItem.
+- Scroll to center on target is not current paneItem.
 
 ## 0.4.7 - Fix deprecated API.
 - Fix for atom/atom#6867
@@ -113,13 +116,13 @@
 ## 0.4.4 - Improve
 - Now configurable `FlashType` from 'line', 'word', 'point'
 
-## 0.4.3 - Fix deubug print.
+## 0.4.3 - Fix debug print.
 - Flash cursor line on landing.
-- Independent setgings object and utility functions.
+- Independent settings object and utility functions.
 - settings option ordered.
 - Set cursor position to middle of screen if target was off-screen.
 
-## 0.4.2 - Fix deubug print.
+## 0.4.2 - Fix debug print.
 
 ## 0.4.1 - Fix version info sorry..
 
@@ -162,7 +165,7 @@
 - Always save history when buffer URI changes.
 - [BREAKING] rename `cursor-history:reset` to `cursor-history:clear`.
 
-## 0.2.1 - Bugfix 2015-05-06
+## 0.2.1 - Bug fix 2015-05-06
 - @direction was set when entry return undefined.
 - Now use Marker which is more resilient to buffer change.
 - Rename filename from cursor-history.coffee to history.coffee
