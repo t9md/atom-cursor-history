@@ -26,6 +26,9 @@ pointDelta = (pointA, pointB) ->
   else
     pointB.traversalFrom(pointA)
 
+closestTextEditor = (target) ->
+  target.closest('atom-text-editor')?.getModel()
+
 class Location
   constructor: (@type, @editor) ->
     @point = @editor.getCursorBufferPosition()
@@ -45,11 +48,12 @@ module.exports =
     @history = new History
     @emitter = new Emitter
 
+    jump = @jump.bind(this)
     @subscriptions.add atom.commands.add 'atom-text-editor',
-      'cursor-history:next': ({target}) => @jump(target, 'next')
-      'cursor-history:prev': ({target}) => @jump(target, 'prev')
-      'cursor-history:next-within-editor': ({target}) => @jump(target, 'next', withinEditor: true)
-      'cursor-history:prev-within-editor': ({target}) => @jump(target, 'prev', withinEditor: true)
+      'cursor-history:next': -> jump(@getModel(), 'next')
+      'cursor-history:prev': -> jump(@getModel(), 'prev')
+      'cursor-history:next-within-editor': -> jump(@getModel(), 'next', withinEditor: true)
+      'cursor-history:prev-within-editor': -> jump(@getModel(), 'prev', withinEditor: true)
       'cursor-history:clear': => @history.clear()
       'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
@@ -95,16 +99,16 @@ module.exports =
   #  - Event bubbling phase: Cursor position updated to clicked position.
   observeMouse: ->
     locationStack = []
-    handleCapture = ({target}) ->
-      model = target.getModel?()
-      if model?.getURI?()
-        locationStack.push(new Location('mousedown', model))
+    handleCapture = (event) ->
+      editor = closestTextEditor(event.target)
+      if editor?.getURI()
+        locationStack.push(new Location('mousedown', editor))
 
-    handleBubble = ({target}) =>
-      return unless target.getModel?()?.getURI?()?
-      setTimeout =>
-        @checkLocationChange(location) if location = locationStack.pop()
-      , 100
+    handleBubble = (event) =>
+      if closestTextEditor(event.target)?.getURI()
+        setTimeout =>
+          @checkLocationChange(location) if location = locationStack.pop()
+        , 100
 
     workspaceElement = atom.views.getView(atom.workspace)
     workspaceElement.addEventListener('mousedown', handleCapture, true)
@@ -115,21 +119,23 @@ module.exports =
       workspaceElement.removeEventListener('mousedown', handleBubble, false)
 
   observeCommands: ->
-    shouldTackLocation = (type, target) =>
-      (':' in type) and (type not in @ignoreCommands) and target.getModel?()?.getURI?()?
+    isInterestingCommand = (type) =>
+      (':' in type) and (type not in @ignoreCommands)
 
     @locationStackForTestSpec = locationStack = []
-    trackLocationChange = (type, target) ->
-      locationStack.push(new Location(type, target.getModel()))
+    trackLocationChange = (type, editor) ->
+      locationStack.push(new Location(type, editor))
     trackLocationChangeDebounced = _.debounce(trackLocationChange, 100, true)
 
     @subscriptions.add atom.commands.onWillDispatch ({type, target}) ->
-      if shouldTackLocation(type, target)
-        trackLocationChangeDebounced(type, target)
+      editor = closestTextEditor(target)
+      if editor?.getURI() and isInterestingCommand(type)
+        trackLocationChangeDebounced(type, editor)
 
     @subscriptions.add atom.commands.onDidDispatch ({type, target}) =>
       return if locationStack.length is 0
-      if shouldTackLocation(type, target)
+      editor = closestTextEditor(target)
+      if editor?.getURI() and isInterestingCommand(type)
         setTimeout =>
           # To wait cursor position is set on final destination in most case.
           @checkLocationChange(location) if location = locationStack.pop()
@@ -146,8 +152,7 @@ module.exports =
     else
       @emitter.emit('did-unfocus', {oldLocation})
 
-  jump: (editorElement, direction, {withinEditor}={}) ->
-    editor = editorElement.getModel()
+  jump: (editor, direction, {withinEditor}={}) ->
     wasAtHead = @history.isIndexAtHead()
     if withinEditor
       entry = @history.get(direction, URI: editor.getURI())

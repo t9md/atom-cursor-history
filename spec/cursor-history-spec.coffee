@@ -32,8 +32,8 @@ describe "cursor-history", ->
     atom.commands.add 'atom-workspace',
       'test:move-down-2': -> getEditor().moveDown(2)
       'test:move-down-5': -> getEditor().moveDown(5)
-      'test:move-up-2':   -> getEditor().moveUp(2)
-      'test:move-up-5':   -> getEditor().moveUp(5)
+      'test:move-up-2': -> getEditor().moveUp(2)
+      'test:move-up-5': -> getEditor().moveUp(5)
 
     pathSample1 = atom.project.resolvePath "sample-1.coffee"
     pathSample2 = atom.project.resolvePath "sample-2.coffee"
