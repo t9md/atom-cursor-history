@@ -1,3 +1,6 @@
+## 0.8.1
+- Fix: More protective to find `closest('atom-text-editor')`
+
 ## 0.8.0 beta only relase
 - Fix: #23 event.target no longer hold editorElement from v1.13.0-beta so fix it.
 - Fix: Remove use of `:shadow` #24

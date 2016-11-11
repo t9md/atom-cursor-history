@@ -27,7 +27,7 @@ pointDelta = (pointA, pointB) ->
     pointB.traversalFrom(pointA)
 
 closestTextEditor = (target) ->
-  target.closest('atom-text-editor')?.getModel()
+  target?.closest?('atom-text-editor')?.getModel()
 
 class Location
   constructor: (@type, @editor) ->
