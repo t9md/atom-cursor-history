@@ -1,3 +1,7 @@
+## 0.8.0 beta only relase
+- Fix: #23 event.target no longer hold editorElement from v1.13.0-beta so fix it.
+- Fix: Remove use of `:shadow` #24
+
 ## 0.7.0
 - Improve: Cleanup codebase for readabiity and explictness.
 - Fix: When visiting history entry, it try to stick same pane(was not in previous release because of bug).
