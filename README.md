@@ -29,12 +29,26 @@ No default keymap. You need to set by yourself.
 
 # Features
 
-- Go and Back to prev/next position of cursor history including closed buffer(can exclude closed buffer with config option).
-- Flash cursor line on land. Can disable, customize flash color, duration and type(line, word, point).
-- Vim like history concatnation(Never save same line per file. This allow you to jump specific line only once).
-- Auto adjust cursor position to middle of screen if target was off-screen.
+- Go and Back to previous/next position of cursor history including closed buffer(can exclude closed buffer with config option).
+- Flash cursor line on land.
+- Vim like history concatenation (Never save same line per file. This allow you to jump specific line only once).
 
 # When cursor history saved?
 
-- when editor lost focus.
-- when cursor position's row delta exceeds rows specified by `rowDeltaToRemember`(default 4).
+- When editor lost focus.
+- When cursor moved and row delta exceeds `rowDeltaToRemember`(default 4).
+- When cursor moved within same row and column delta exceeds `columnDeltaToRemember`(default 9999).
+
+# Customize flashing effects.
+
+When you enabled `flashOnLand`(default `false`), it flashes cursor line when move around history position.  
+You can customize flashing effect in your `style.less` based on following example.  
+
+```less
+@keyframes cursor-history-flash {
+  from { background-color: red; }
+}
+atom-text-editor.editor .line.cursor-history-flash-line {
+  animation-duration: 1s;
+}
+```

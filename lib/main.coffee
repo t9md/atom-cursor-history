@@ -196,26 +196,13 @@ module.exports =
   flashMarker: null
   flash: (editor) ->
     @flashMarker?.destroy()
-
-    cursor = editor.getLastCursor()
-    switch settings.get('flashType')
-      when 'line'
-        type = 'line'
-        range = cursor.getCurrentLineBufferRange()
-      when 'word'
-        type = 'highlight'
-        range = cursor.getCurrentWordBufferRange()
-      when 'point'
-        type = 'highlight'
-        range = editor.bufferRangeForScreenRange(cursor.getScreenRange())
-
-    @flashMarker = editor.markBufferRange(range)
-    className = "cursor-history-#{settings.get('flashColor')}"
-    editor.decorateMarker(@flashMarker, {type, class: className})
+    @flashMarker = editor.markBufferPosition(editor.getCursorBufferPosition())
+    decorationOptions = {type: 'line', class: 'cursor-history-flash-line'}
+    editor.decorateMarker(@flashMarker, decorationOptions)
 
     setTimeout =>
       @flashMarker?.destroy()
-    , settings.get('flashDurationMilliSeconds')
+    , 1000 # [NOTE] animation-duration has to be shorter than this value(1sec)
 
   logHistory: (msg) ->
     s = """

@@ -1,42 +1,14 @@
 @import "ui-variables";
-atom-text-editor.editor {
-  .line {
-    &.cursor-history-info {
-      background-color: @background-color-info;
-    }
-    &.cursor-history-success {
-      background-color: @background-color-success;
-    }
-    &.cursor-history-warning {
-      background-color: @background-color-warning;
-    }
-    &.cursor-history-error {
-      background-color: @background-color-error;
-    }
-    &.cursor-history-highlight {
-      background-color: @background-color-highlight;
-    }
-    &.cursor-history-selected {
-      background-color: @background-color-selected;
-    }
-  }
 
-  .cursor-history-info .region {
-    background-color: @background-color-info;
-  }
-  .cursor-history-success .region {
-    background-color: @background-color-success;
-  }
-  .cursor-history-warning .region {
-    background-color: @background-color-warning;
-  }
-  .cursor-history-error .region {
-    background-color: @background-color-error;
-  }
-  .cursor-history-highlight .region {
-    background-color: @background-color-highlight;
-  }
-  .cursor-history-selected .region {
-    background-color: @background-color-selected;
-  }
+@flash-background: fadeout(darken(@syntax-selection-flash-color, 10%), 20%);
+
+@keyframes cursor-history-flash {
+  from { background-color: @flash-background; }
+  to { background-color: transparent; }
+}
+
+atom-text-editor.editor .line.cursor-history-flash-line {
+  animation-name: cursor-history-flash;
+  animation-iteration-count: 1;
+  animation-duration: .5s;
 }

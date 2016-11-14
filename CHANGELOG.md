@@ -1,3 +1,10 @@
+## 0.10.0
+- Improve: Better UI flashing effect using keyframe animation.
+- Breaking: deprecated following setting parameter. The line flashing is only supported flashing way and not customizable.
+  - `flashDurationMilliSeconds`
+  - `flashColor`
+  - `flashType`
+
 ## 0.9.0
 - Fix: DEPRECATED warning. No longer use `:shadow` #11
 

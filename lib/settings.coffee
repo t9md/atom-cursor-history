@@ -92,17 +92,6 @@ module.exports = new Settings 'cursor-history',
   flashOnLand:
     default: false
     description: "flash cursor on land"
-  flashDurationMilliSeconds:
-    default: 150
-    description: "Duration for flash"
-  flashColor:
-    default: 'info'
-    enum: ['info', 'success', 'warning', 'error', 'highlight', 'selected']
-    description: 'flash color style, correspoinding to @background-color-{flashColor}: see `styleguide:show`'
-  flashType:
-    default: 'line'
-    enum: ['line', 'word', 'point']
-    description: 'Range to be flashed'
   ignoreCommands:
     default: ['command-palette:toggle']
     items: type: 'string'
