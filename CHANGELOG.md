@@ -1,3 +1,7 @@
+## 0.9.1
+- Fix: Was not flashed when jump to different buffer.
+- Improve: Invalidate marker for flash to avoid disturbance when immediately start editing after land.
+
 ## 0.9.0
 - Improve: Better UI flashing effect using keyframe animation.
 - Breaking: deprecated following setting parameter. The line flashing is only supported flashing way and not customizable.
