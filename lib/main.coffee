@@ -170,39 +170,45 @@ module.exports =
       @saveHistory(location, setIndexToHead: false, subject: "Save head position")
       needToLog = false
 
-    land = (editor) =>
-      @land(editor, point)
-      if settings.get('debug') and needToLog
-        @logHistory(direction)
-
     activePane = atom.workspace.getActivePane()
     if editor.getURI() is URI
-      land(editor)
+      @land(editor, point, direction, log: needToLog)
     else if item = findEditorForPaneByURI(activePane, URI)
       activePane.activateItem(item)
-      land(item)
+      @land(item, point, direction, forceFlash: true, log: needToLog)
     else
-      atom.workspace.open(URI, searchAllPanes: settings.get('searchAllPanes')).then(land)
+      atom.workspace.open(URI, searchAllPanes: settings.get('searchAllPanes')).then (editor) =>
+        @land(editor, point, direction, forceFlash: true, log: needToLog)
 
-  land: (editor, point) ->
+  land: (editor, point, direction, options={}) ->
     originalRow = editor.getCursorBufferPosition().row
-
     editor.setCursorBufferPosition(point, autoscroll: false)
     editor.scrollToCursorPosition(center: true)
 
-    if settings.get('flashOnLand') and (originalRow isnt point.row)
-      @flash(editor)
+    if settings.get('flashOnLand')
+      if options.forceFlash or (originalRow isnt point.row)
+        @flash(editor)
+
+    if settings.get('debug') and options.log
+      @logHistory(direction)
+
 
   flashMarker: null
   flash: (editor) ->
     @flashMarker?.destroy()
-    @flashMarker = editor.markBufferPosition(editor.getCursorBufferPosition())
+    cursorPosition = editor.getCursorBufferPosition()
+    @flashMarker = editor.markBufferPosition(cursorPosition)
     decorationOptions = {type: 'line', class: 'cursor-history-flash-line'}
     editor.decorateMarker(@flashMarker, decorationOptions)
 
-    setTimeout =>
+    destroyMarker = =>
+      disposable?.destroy()
+      disposable = null
       @flashMarker?.destroy()
-    , 1000 # [NOTE] animation-duration has to be shorter than this value(1sec)
+
+    disposable = editor.onDidChangeCursorPosition(destroyMarker)
+    # [NOTE] animation-duration has to be shorter than this value(1sec)
+    setTimeout(destroyMarker, 1000)
 
   logHistory: (msg) ->
     s = """
