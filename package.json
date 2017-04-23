@@ -8,8 +8,6 @@
   "engines": {
     "atom": "^1.13.0-beta1"
   },
-  "dependencies": {
-    "underscore-plus": "^1.6.6"
-  },
+  "dependencies": {},
   "devDependencies": {}
 }
