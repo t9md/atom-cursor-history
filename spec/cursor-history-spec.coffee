@@ -1,4 +1,3 @@
-_ = require 'underscore-plus'
 {Point} = require 'atom'
 settings = require '../lib/settings'
 
@@ -15,25 +14,26 @@ addCustomMatchers = (spec) ->
       (@actual.URI is expected.URI) and (Point.fromObject(@actual.point).isEqual Point.fromObject(expected.point))
 
 describe "cursor-history", ->
-  [editor, editorElement, main, pathSample1, pathSample2, workspaceElement] = []
+  [editor, editorElement, main, pathSample1, pathSample2, workspaceElement, fakeClock] = []
 
   getEntries = (which=null) ->
     entries = main.history.entries
     switch which
-      when 'last' then _.last(entries)
-      when 'first' then _.first(entries)
-      else entries
+      when 'last'
+        entries.slice(-1)[0]
+      when 'first'
+        entries[0]
+      else
+        entries
 
   beforeEach ->
     addCustomMatchers(this)
 
-    spyOn(_._, "now").andCallFake -> window.now
-
-    atom.commands.add 'atom-workspace',
-      'test:move-down-2': -> getEditor().moveDown(2)
-      'test:move-down-5': -> getEditor().moveDown(5)
-      'test:move-up-2': -> getEditor().moveUp(2)
-      'test:move-up-5': -> getEditor().moveUp(5)
+    atom.commands.add 'atom-text-editor',
+      'test:move-down-2': -> @getModel().moveDown(2)
+      'test:move-down-5': -> @getModel().moveDown(5)
+      'test:move-up-2': -> @getModel().moveUp(2)
+      'test:move-up-5': -> @getModel().moveUp(5)
 
     pathSample1 = atom.project.resolvePath "sample-1.coffee"
     pathSample2 = atom.project.resolvePath "sample-2.coffee"
@@ -51,9 +51,7 @@ describe "cursor-history", ->
 
   describe "initial state of history entries", ->
     it "is empty", ->
-      expect(getEntries()).toHaveLength 0
-    it "index is 0", ->
-      expect(main.history.index).toBe 0
+      expect(main.history).not.toBeTruthy()
 
   describe "history saving", ->
     describe "cursor moved", ->
@@ -61,7 +59,6 @@ describe "cursor-history", ->
         editor.setCursorBufferPosition [0, 5]
         dispatchCommand(editorElement, 'test:move-down-5')
         expect(getEntries()).toHaveLength 1
-        expect(getEntries('first')).toBeEqualEntry point: [0, 5], URI: pathSample1
         expect(getEntries('first')).toBeEqualEntry point: [0, 5], URI: pathSample1
 
       it "can save multiple entry", ->
@@ -76,9 +73,18 @@ describe "cursor-history", ->
         expect(e3).toBeEqualEntry point: [10, 0], URI: pathSample1
 
       it "wont save history if line delta of move is less than 4 line", ->
-        dispatchCommand editorElement, 'core:move-down'
+        dispatchCommand(editorElement, 'core:move-down')
         expect(editor.getCursorBufferPosition()).toEqual([1, 0])
-        expect(getEntries()).toHaveLength 0
+        expect(main.history).not.toBeTruthy()
+
+        dispatchCommand(editorElement, 'test:move-down-5')
+        expect(editor.getCursorBufferPosition()).toEqual([6, 0])
+        entries = getEntries()
+        expect(entries).toHaveLength(1)
+        expect(entries[0]).toBeEqualEntry point: [1, 0], URI: pathSample1
+        dispatchCommand(editorElement, 'core:move-down')
+        expect(editor.getCursorBufferPosition()).toEqual([7, 0])
+        expect(getEntries()).toBe(entries)
 
       it "remove older entry if its row is same as new entry", ->
         dispatchCommand editorElement, 'test:move-down-5'
@@ -122,7 +128,7 @@ describe "cursor-history", ->
 
   describe "go/back history with next/prev commands", ->
     isInitialState = ->
-      expect(getEntries()).toHaveLength 0
+      expect(main.history).not.toBeTruthy()
       expect(editor.getCursorBufferPosition()).toEqual [0, 0]
 
     beforeEach ->
@@ -293,7 +299,7 @@ describe "cursor-history", ->
       [editor2, editorElement2] = []
       beforeEach ->
         editor.setCursorBufferPosition([1, 2])
-        expect(getEntries()).toHaveLength 0
+        expect(main.history).not.toBeTruthy()
         expect(editorElement.hasFocus()).toBe true
         atom.commands.add editorElement,
           'test:open-sample2': ->

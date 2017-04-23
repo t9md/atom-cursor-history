@@ -1,5 +1,4 @@
 {CompositeDisposable, Disposable, Emitter, Range} = require 'atom'
-debounce = null
 settings = require './settings'
 
 defaultIgnoreCommands = [
@@ -14,16 +13,10 @@ findEditorForPaneByURI = (pane, URI) ->
   for item in pane.getItems() when atom.workspace.isTextEditor(item)
     return item if item.getURI() is URI
 
-pointDelta = (pointA, pointB) ->
-  if pointA.isGreaterThan(pointB)
-    pointA.traversalFrom(pointB)
-  else
-    pointB.traversalFrom(pointA)
-
 closestTextEditor = (target) ->
   target?.closest?('atom-text-editor')?.getModel()
 
-createLocation = (type, editor)->
+createLocation = (type, editor) ->
   return {
     type: type
     editor: editor
@@ -58,8 +51,16 @@ module.exports =
     @observeSettings()
 
     @onDidChangeLocation ({oldLocation, newLocation}) =>
-      {row, column} = pointDelta(oldLocation.point, newLocation.point)
-      if (row > settings.get('rowDeltaToRemember')) or (row is 0 and column > settings.get('columnDeltaToRemember'))
+      oldPoint = oldLocation.point
+      newPoint = newLocation.point
+
+      if oldPoint.isGreaterThan(newPoint)
+        {row, column} = oldPoint.traversalFrom(newPoint)
+      else
+        {row, column} = newPoint.traversalFrom(oldPoint)
+
+      if (row > settings.get('rowDeltaToRemember')) or
+          (row is 0 and column > settings.get('columnDeltaToRemember'))
         @saveHistory(oldLocation, subject: "Cursor moved")
 
     @onDidUnfocus ({oldLocation}) =>
@@ -68,6 +69,7 @@ module.exports =
   deactivate: ->
     @subscriptions.dispose()
     @history?.destroy()
+    [@subscriptions, @history] = []
 
   observeSettings: ->
     @subscriptions.add settings.observe 'keepSingleEntryPerBuffer', (newValue) =>
@@ -118,20 +120,20 @@ module.exports =
       (':' in type) and (type not in @ignoreCommands)
 
     @locationStackForTestSpec = locationStack = []
-    trackLocationChange = (type, editor) ->
-      locationStack.push(createLocation(type, editor))
-
-    trackLocationChangeDebounced = null # To defer require(underscore-plus)
-    debounce ?= require('underscore-plus').debounce
-    trackLocationChangeDebounced ?= debounce(trackLocationChange, 100, true)
+    trackLocationTimeout = null
+    trackLocationChangeEdgeDebounced = (type, editor) ->
+      if trackLocationTimeout?
+        clearTimeout(trackLocationTimeout)
+      else
+        locationStack.push(createLocation(type, editor))
+      trackLocationTimeout = setTimeout ->
+        trackLocationTimeout = null
+      , 100
 
     @subscriptions.add atom.commands.onWillDispatch ({type, target}) ->
       editor = closestTextEditor(target)
       if editor?.getURI() and isInterestingCommand(type)
-        # unless trackLocationChangeDebounced?
-        #   debounce ?= require('underscore-plus').debounce
-        #   trackLocationChangeDebounced ?= debounce(trackLocationChange, 100, true)
-        trackLocationChangeDebounced(type, editor)
+        trackLocationChangeEdgeDebounced(type, editor)
 
     @subscriptions.add atom.commands.onDidDispatch ({type, target}) =>
       return if locationStack.length is 0
