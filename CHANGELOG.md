@@ -1,3 +1,6 @@
+## 0.10.0: WIP
+- Improve: Speedup activation time. No longer dependent on `underscore-plus`.
+
 ## 0.9.1
 - Fix: Was not flashed when jump to different buffer.
 - Improve: Invalidate marker for flash to avoid disturbance when immediately start editing after land.
