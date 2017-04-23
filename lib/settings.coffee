@@ -1,9 +1,6 @@
-_ = require 'underscore-plus'
 {CompositeDisposable} = require 'atom'
 
 class Settings
-  cache: {}
-
   constructor: (@scope, @config) ->
     @disposables = new CompositeDisposable
 
@@ -17,9 +14,6 @@ class Settings
         when typeof(object.default) is 'boolean' then 'boolean'
         when typeof(object.default) is 'string' then 'string'
         when Array.isArray(object.default) then 'array'
-
-  destroy: ->
-    @disposables.dispose()
 
   notifyAndDelete: (params...) ->
     paramsToDelete = (param for param in params when @has(param))
@@ -52,9 +46,6 @@ class Settings
   delete: (param) ->
     @set(param, undefined)
 
-  setCachableParams: (params) ->
-    @cachableParams = params
-
   get: (param) ->
     atom.config.get("#{@scope}.#{param}")
 
@@ -65,7 +56,7 @@ class Settings
     @set(param, not @get(param))
 
   observe: (param, fn) ->
-    @disposables.add(atom.config.observe("#{@scope}.#{param}", fn))
+    atom.config.observe("#{@scope}.#{param}", fn)
 
 module.exports = new Settings 'cursor-history',
   max:
@@ -90,7 +81,7 @@ module.exports = new Settings 'cursor-history',
     default: true
     description: "Search existing buffer from all panes before opening new editor"
   flashOnLand:
-    default: false
+    default: true
     description: "flash cursor on land"
   ignoreCommands:
     default: ['command-palette:toggle']

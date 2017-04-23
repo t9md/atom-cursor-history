@@ -1,8 +1,5 @@
 {CompositeDisposable, Disposable, Emitter, Range} = require 'atom'
-_ = require 'underscore-plus'
-path = require 'path'
-
-History = require './history'
+debounce = null
 settings = require './settings'
 
 defaultIgnoreCommands = [
@@ -13,11 +10,8 @@ defaultIgnoreCommands = [
   'cursor-history:clear',
 ]
 
-isTextEditor = (object) ->
-  atom.workspace.isTextEditor(object)
-
 findEditorForPaneByURI = (pane, URI) ->
-  for item in pane.getItems() when isTextEditor(item)
+  for item in pane.getItems() when atom.workspace.isTextEditor(item)
     return item if item.getURI() is URI
 
 pointDelta = (pointA, pointB) ->
@@ -29,10 +23,13 @@ pointDelta = (pointA, pointB) ->
 closestTextEditor = (target) ->
   target?.closest?('atom-text-editor')?.getModel()
 
-class Location
-  constructor: (@type, @editor) ->
-    @point = @editor.getCursorBufferPosition()
-    @URI = @editor.getURI()
+createLocation = (type, editor)->
+  return {
+    type: type
+    editor: editor
+    point: editor.getCursorBufferPosition()
+    URI: editor.getURI()
+  }
 
 module.exports =
   config: settings.config
@@ -45,7 +42,6 @@ module.exports =
 
   activate: ->
     @subscriptions = new CompositeDisposable
-    @history = new History
     @emitter = new Emitter
 
     jump = @jump.bind(this)
@@ -54,7 +50,7 @@ module.exports =
       'cursor-history:prev': -> jump(@getModel(), 'prev')
       'cursor-history:next-within-editor': -> jump(@getModel(), 'next', withinEditor: true)
       'cursor-history:prev-within-editor': -> jump(@getModel(), 'prev', withinEditor: true)
-      'cursor-history:clear': => @history.clear()
+      'cursor-history:clear': => @history?.clear()
       'cursor-history:toggle-debug': -> settings.toggle 'debug', log: true
 
     @observeMouse()
@@ -70,20 +66,19 @@ module.exports =
       @saveHistory(oldLocation, subject: "Save on focus lost")
 
   deactivate: ->
-    settings.destroy()
     @subscriptions.dispose()
-    @history.destroy()
-    {@history, @subscriptions} = {}
+    @history?.destroy()
 
   observeSettings: ->
-    settings.observe 'keepSingleEntryPerBuffer', (newValue) =>
+    @subscriptions.add settings.observe 'keepSingleEntryPerBuffer', (newValue) =>
       if newValue
-        @history.uniqueByBuffer()
+        @history?.uniqueByBuffer()
 
-    settings.observe 'ignoreCommands', (newValue) =>
+    @subscriptions.add settings.observe 'ignoreCommands', (newValue) =>
       @ignoreCommands = defaultIgnoreCommands.concat(newValue)
 
   saveHistory: (location, {subject, setIndexToHead}={}) ->
+    @history ?= new (require './history')
     @history.add(location, {setIndexToHead})
     @logHistory("#{subject} [#{location.type}]") if settings.get('debug')
 
@@ -102,7 +97,7 @@ module.exports =
     handleCapture = (event) ->
       editor = closestTextEditor(event.target)
       if editor?.getURI()
-        locationStack.push(new Location('mousedown', editor))
+        locationStack.push(createLocation('mousedown', editor))
 
     handleBubble = (event) =>
       if closestTextEditor(event.target)?.getURI()
@@ -124,12 +119,18 @@ module.exports =
 
     @locationStackForTestSpec = locationStack = []
     trackLocationChange = (type, editor) ->
-      locationStack.push(new Location(type, editor))
-    trackLocationChangeDebounced = _.debounce(trackLocationChange, 100, true)
+      locationStack.push(createLocation(type, editor))
+
+    trackLocationChangeDebounced = null # To defer require(underscore-plus)
+    debounce ?= require('underscore-plus').debounce
+    trackLocationChangeDebounced ?= debounce(trackLocationChange, 100, true)
 
     @subscriptions.add atom.commands.onWillDispatch ({type, target}) ->
       editor = closestTextEditor(target)
       if editor?.getURI() and isInterestingCommand(type)
+        # unless trackLocationChangeDebounced?
+        #   debounce ?= require('underscore-plus').debounce
+        #   trackLocationChangeDebounced ?= debounce(trackLocationChange, 100, true)
         trackLocationChangeDebounced(type, editor)
 
     @subscriptions.add atom.commands.onDidDispatch ({type, target}) =>
@@ -147,12 +148,13 @@ module.exports =
 
     if editor.element.hasFocus() and (editor.getURI() is oldLocation.URI)
       # Move within same buffer.
-      newLocation = new Location(oldLocation.type, editor)
+      newLocation = createLocation(oldLocation.type, editor)
       @emitter.emit('did-change-location', {oldLocation, newLocation})
     else
       @emitter.emit('did-unfocus', {oldLocation})
 
   jump: (editor, direction, {withinEditor}={}) ->
+    return unless @history?
     wasAtHead = @history.isIndexAtHead()
     if withinEditor
       entry = @history.get(direction, URI: editor.getURI())
@@ -166,7 +168,7 @@ module.exports =
 
     needToLog = true
     if (direction is 'prev') and wasAtHead
-      location = new Location('prev', editor)
+      location = createLocation('prev', editor)
       @saveHistory(location, setIndexToHead: false, subject: "Save head position")
       needToLog = false
 

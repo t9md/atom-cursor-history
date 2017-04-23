@@ -1,7 +1,7 @@
-_ = require 'underscore-plus'
 Entry = require './entry'
 settings = require './settings'
 
+module.exports =
 class History
   constructor: ->
     @init()
@@ -149,5 +149,3 @@ class History
         "#{s}#{i}: #{e.inspect()}"
     ary.push "> #{@index}:" if (@index is @entries.length)
     ary.join("\n")
-
-module.exports = History
