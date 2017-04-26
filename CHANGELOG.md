@@ -1,5 +1,6 @@
-## 0.10.0: WIP
+## 0.10.0:
 - Improve: Speedup activation time. No longer dependent on `underscore-plus`.
+  - Activation time diff: from 20ms to 5ms in my env.
 
 ## 0.9.1
 - Fix: Was not flashed when jump to different buffer.
