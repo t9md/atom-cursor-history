@@ -1,6 +1,5 @@
 {CompositeDisposable} = require 'atom'
 existsSync = null
-settings = require './settings'
 path = null
 
 # Wrapper for Point or Marker.
@@ -38,7 +37,7 @@ class Entry
     return false if @isDestroyed()
     existsSync ?= require('fs').existsSync
 
-    if settings.get('excludeClosedBuffer')
+    if atom.config.get('cursor-history.excludeClosedBuffer')
       @editor?.isAlive() and existsSync(@URI)
     else
       existsSync(@URI)

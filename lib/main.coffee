@@ -1,5 +1,4 @@
 {CompositeDisposable, Disposable} = require 'atom'
-settings = require './settings'
 
 defaultIgnoreCommands = [
   'cursor-history:next',
@@ -22,16 +21,10 @@ createLocation = (editor, type) ->
   }
 
 module.exports =
-  config: settings.config
-  history: null
-  subscriptions: null
-  ignoreCommands: null
-
   activate: ->
     @subscriptions = new CompositeDisposable
 
-    jump = (args...) =>
-      @history?.jump(args...)
+    jump = (args...) => @history?.jump(args...)
 
     @subscriptions.add atom.commands.add 'atom-text-editor',
       'cursor-history:next': -> jump(@getModel(), 'next')
@@ -39,12 +32,17 @@ module.exports =
       'cursor-history:next-within-editor': -> jump(@getModel(), 'next', withinEditor: true)
       'cursor-history:prev-within-editor': -> jump(@getModel(), 'prev', withinEditor: true)
       'cursor-history:clear': => @history?.clear()
-      'cursor-history:toggle-debug': -> settings.toggle('debug', log: true)
+      'cursor-history:toggle-debug': => @toggleDebug()
 
     @observeMouse()
     @observeCommands()
-    @subscriptions.add settings.observe 'ignoreCommands', (newValue) =>
+    @subscriptions.add atom.config.observe 'cursor-history.ignoreCommands', (newValue) =>
       @ignoreCommands = defaultIgnoreCommands.concat(newValue)
+
+  toggleDebug: ->
+    newValue = not atom.config.get('cursor-history.debug')
+    atom.config.set('cursor-history.debug', newValue)
+    console.log 'debug: ', newValue
 
   deactivate: ->
     @subscriptions.dispose()
@@ -126,8 +124,8 @@ module.exports =
       else
         {row, column} = newPoint.traversalFrom(oldPoint)
 
-      if (row > settings.get('rowDeltaToRemember')) or
-          (row is 0 and column > settings.get('columnDeltaToRemember'))
+      if (row > atom.config.get('cursor-history.rowDeltaToRemember')) or
+          (row is 0 and column > atom.config.get('cursor-history.columnDeltaToRemember'))
         @getHistory().add(oldLocation, subject: "Cursor moved")
     else
       @getHistory().add(oldLocation, subject: "Save on focus lost")

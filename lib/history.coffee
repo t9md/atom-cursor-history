@@ -1,5 +1,4 @@
 Entry = require './entry'
-settings = require './settings'
 
 findEditorForPaneByURI = (pane, URI) ->
   for item in pane.getItems() when atom.workspace.isTextEditor(item)
@@ -8,7 +7,7 @@ findEditorForPaneByURI = (pane, URI) ->
 module.exports =
 class History
   constructor: (@createLocation) ->
-    @configObserver = settings.observe 'keepSingleEntryPerBuffer', (newValue) =>
+    @configObserver = atom.config.observe 'cursor-history.keepSingleEntryPerBuffer', (newValue) =>
       @uniqueByBuffer() if newValue
     @init()
 
@@ -109,13 +108,13 @@ class History
   #    No special @index adjustment.
   #
   add: (location, {subject, setIndexToHead}={}) ->
-    if settings.get('debug')
+    if atom.config.get('cursor-history.debug')
       @log("#{subject} [#{location.type}]")
 
     {editor, point, URI} = location
     newEntry = new Entry(editor, point, URI)
 
-    if settings.get('keepSingleEntryPerBuffer')
+    if atom.config.get('cursor-history.keepSingleEntryPerBuffer')
       for entry in @entries when entry.URI is newEntry.URI
         entry.destroy()
     else
@@ -147,7 +146,7 @@ class History
     @entries = @entries.filter (entry) -> entry.isValid()
 
     # Remove if exceeds max
-    removeCount = @entries.length - settings.get('max')
+    removeCount = @entries.length - atom.config.get('cursor-history.max')
     if removeCount > 0
       removed = @entries.splice(0, removeCount)
       entry.destroy() for entry in removed
@@ -191,7 +190,7 @@ class History
       activePane.activateItem(item)
       @land(item, point, direction, forceFlash: true, log: needToLog)
     else
-      searchAllPanes = settings.get('searchAllPanes')
+      searchAllPanes = atom.config.get('cursor-history.searchAllPanes')
       atom.workspace.open(URI, {searchAllPanes}).then (editor) =>
         @land(editor, point, direction, forceFlash: true, log: needToLog)
 
@@ -200,11 +199,11 @@ class History
     editor.setCursorBufferPosition(point, autoscroll: false)
     editor.scrollToCursorPosition(center: true)
 
-    if settings.get('flashOnLand')
+    if atom.config.get('cursor-history.flashOnLand')
       if options.forceFlash or (originalRow isnt point.row)
         @flash(editor)
 
-    if settings.get('debug') and options.log
+    if atom.config.get('cursor-history.debug') and options.log
       @log(direction)
 
   flashMarker: null

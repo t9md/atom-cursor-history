@@ -8,6 +8,69 @@
   "engines": {
     "atom": "^1.13.0-beta1"
   },
+  "configSchema": {
+    "max": {
+      "default": 100,
+      "minimum": 1,
+      "description": "number of history to keep",
+      "order": 0,
+      "type": "integer"
+    },
+    "rowDeltaToRemember": {
+      "default": 4,
+      "minimum": 0,
+      "description": "Save history when row delta was greater than this value",
+      "order": 1,
+      "type": "integer"
+    },
+    "columnDeltaToRemember": {
+      "default": 9999,
+      "minimum": 0,
+      "description": "Save history when cursor moved within same row and column delta was greater than this value",
+      "order": 2,
+      "type": "integer"
+    },
+    "excludeClosedBuffer": {
+      "default": false,
+      "description": "Don't open closed Buffer on history excursion",
+      "order": 3,
+      "type": "boolean"
+    },
+    "keepSingleEntryPerBuffer": {
+      "default": false,
+      "description": "Keep latest entry only per buffer",
+      "order": 4,
+      "type": "boolean"
+    },
+    "searchAllPanes": {
+      "default": true,
+      "description": "Search existing buffer from all panes before opening new editor",
+      "order": 5,
+      "type": "boolean"
+    },
+    "flashOnLand": {
+      "default": true,
+      "description": "flash cursor on land",
+      "order": 6,
+      "type": "boolean"
+    },
+    "ignoreCommands": {
+      "default": [
+        "command-palette:toggle"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "description": "list of commands to exclude from history tracking.",
+      "order": 7,
+      "type": "array"
+    },
+    "debug": {
+      "default": false,
+      "order": 8,
+      "type": "boolean"
+    }
+  },
   "dependencies": {},
   "devDependencies": {}
 }

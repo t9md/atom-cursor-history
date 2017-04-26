@@ -1,5 +1,7 @@
 {Point} = require 'atom'
-settings = require '../lib/settings'
+
+setConfig = (param, value) ->
+  atom.config.set("cursor-history.#{param}", value)
 
 getEditor = ->
   atom.workspace.getActiveTextEditor()
@@ -111,7 +113,7 @@ describe "cursor-history", ->
 
     describe "rowDeltaToRemember settings", ->
       beforeEach ->
-        settings.set('rowDeltaToRemember', 1)
+        setConfig('rowDeltaToRemember', 1)
 
       describe "when set to 1", ->
         it "save history when cursor move over 1 line", ->
@@ -172,13 +174,13 @@ describe "cursor-history", ->
 
       runCommand = (command, fn) ->
         runs ->
-          spyOn(main, "land").andCallThrough()
+          spyOn(main.history, "land").andCallThrough()
           target = atom.workspace.getActiveTextEditor().element
-          atom.commands.dispatch target, command
+          atom.commands.dispatch(target, command)
 
-        waitsFor -> main.land.callCount is 1
+        waitsFor -> main.history.land.callCount is 1
         runs -> fn()
-        runs -> jasmine.unspy(main, 'land')
+        runs -> jasmine.unspy(main.history, 'land')
 
       isEntry = (index) ->
         expect(main.history.index).toBe index
@@ -253,7 +255,7 @@ describe "cursor-history", ->
 
         describe "excludeClosedBuffer setting is true", ->
           beforeEach ->
-            settings.set('excludeClosedBuffer', true)
+            setConfig('excludeClosedBuffer', true)
 
           it "skip entry for destroyed editor", ->
             expect(getValidEntries()).toHaveLength 2
@@ -275,7 +277,7 @@ describe "cursor-history", ->
         describe "when set to true", ->
           it "keep only latest entry per buffer and remove other entries", ->
             expect(getEntries()).toHaveLength 4
-            settings.set('keepSingleEntryPerBuffer', true)
+            setConfig('keepSingleEntryPerBuffer', true)
             expect(getEntries()).toHaveLength 2
             entries = getEntries()
             expect(entries[0].URI).toBe(pathSample1)
@@ -285,7 +287,7 @@ describe "cursor-history", ->
 
           it "keep only latest entry per buffer and remove other entries", ->
             expect(getEntries()).toHaveLength 4
-            settings.set('keepSingleEntryPerBuffer', true)
+            setConfig('keepSingleEntryPerBuffer', true)
             expect(getEntries()).toHaveLength 2
             expect(editor2.getCursorBufferPosition()).toEqual([10, 0])
             dispatchCommand editorElement2, 'test:move-up-5'
@@ -309,7 +311,7 @@ describe "cursor-history", ->
 
       describe "ignoreCommands is empty", ->
         it "save cursor position to history when editor lost focus", ->
-          settings.set('ignoreCommands', [])
+          setConfig('ignoreCommands', [])
           runs -> atom.commands.dispatch editorElement, 'test:open-sample2'
           spyOn(main, "checkLocationChange").andCallThrough()
           waitsFor -> main.checkLocationChange.callCount is 1
@@ -338,6 +340,6 @@ describe "cursor-history", ->
           runs -> expect(locationStackLength).toBe 1
 
         it "Doesn't track location change when editor lost focus", ->
-          settings.set('ignoreCommands', ['test:open-sample2'])
+          setConfig('ignoreCommands', ['test:open-sample2'])
           waitsForPromise -> dispatchOpenSample2Command()
           runs -> expect(locationStackLength).toBe 0
