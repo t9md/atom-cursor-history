@@ -1,3 +1,6 @@
+## 0.10.1:
+- Fix: Not usable when user enable `keepSingleEntryPerBuffer` config. #31
+
 ## 0.10.0:
 - Improve: Speedup activation time. No longer dependent on `underscore-plus`.
   - Activation time diff: from 20ms to 5ms in my env.

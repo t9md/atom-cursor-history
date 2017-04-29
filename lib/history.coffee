@@ -7,9 +7,9 @@ findEditorForPaneByURI = (pane, URI) ->
 module.exports =
 class History
   constructor: (@createLocation) ->
+    @init()
     @configObserver = atom.config.observe 'cursor-history.keepSingleEntryPerBuffer', (newValue) =>
       @uniqueByBuffer() if newValue
-    @init()
 
   init: ->
     @index = 0
