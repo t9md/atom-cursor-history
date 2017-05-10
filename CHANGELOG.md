@@ -1,3 +1,7 @@
+## 0.11.0: WIP
+- Meta: Add following tags in `keywords` section of package.json for better findability.
+  - `jumplist`, `history`, `navigation`
+
 ## 0.10.1:
 - Fix: Not usable when user enable `keepSingleEntryPerBuffer` config. #31
 

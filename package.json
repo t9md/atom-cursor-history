@@ -3,6 +3,11 @@
   "main": "./lib/main",
   "version": "0.10.1",
   "description": "Cursor position history manager",
+  "keywords": [
+    "jumplist",
+    "history",
+    "navigation"
+  ],
   "repository": "https://github.com/t9md/atom-cursor-history",
   "license": "MIT",
   "engines": {
