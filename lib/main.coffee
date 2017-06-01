@@ -1,4 +1,9 @@
+{inspect} = require 'util'
+logLocation = (msg, loc) ->
+  # console.log msg, inspect(loc)
+
 {CompositeDisposable, Disposable} = require 'atom'
+History = null
 
 defaultIgnoreCommands = [
   'cursor-history:next',
@@ -20,11 +25,19 @@ createLocation = (editor, type) ->
     URI: editor.getURI()
   }
 
+pointByURI = {}
+focusedEditorsByURI = {}
+
 module.exports =
-  activate: ->
+  serialize: ->
+    {
+      history: @history?.serialize() ? @restoredState.history
+    }
+
+  activate: (@restoredState) ->
     @subscriptions = new CompositeDisposable
 
-    jump = (args...) => @history?.jump(args...)
+    jump = (args...) => @getHistory().jump(args...)
 
     @subscriptions.add atom.commands.add 'atom-text-editor',
       'cursor-history:next': -> jump(@getModel(), 'next')
@@ -50,7 +63,13 @@ module.exports =
     [@subscriptions, @history] = []
 
   getHistory: ->
-    @history ?= new (require('./history'))(createLocation)
+    return @history if @history?
+    History ?= require('./history')
+
+    if @restoredState?.history
+      @history = History.deserialize(createLocation, @restoredState.history)
+    else
+      @history = new History(createLocation)
 
   # When mouse clicked, cursor position is updated by atom core using setCursorScreenPosition()
   # To track cursor position change caused by mouse click, I use mousedown event.
@@ -60,7 +79,9 @@ module.exports =
     locationStack = []
     handleCapture = (event) ->
       if editor = closestTextEditorHavingURI(event.target)
-        locationStack.push(createLocation(editor, 'mousedown'))
+        loc = createLocation(editor, 'mousedown')
+        # logLocation('push', loc)
+        locationStack.push(loc)
 
     handleBubble = (event) =>
       if editor = closestTextEditorHavingURI(event.target)
@@ -116,6 +137,7 @@ module.exports =
     if editor.element.hasFocus() and (editor.getURI() is oldLocation.URI)
       # Move within same buffer.
       newLocation = createLocation(editor, oldLocation.type)
+      # logLocation('compare new', newLocation)
       oldPoint = oldLocation.point
       newPoint = newLocation.point
 
