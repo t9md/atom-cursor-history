@@ -54,9 +54,10 @@ module.exports =
     console.log 'debug: ', newValue
 
   deactivate: ->
+    clearTimeout(@locationCheckTimeoutID)
     @subscriptions.dispose()
     @history?.destroy()
-    [@subscriptions, @history] = []
+    [@subscriptions, @history, @locationCheckTimeoutID] = []
 
   getHistory: ->
     return @history if @history?
@@ -73,12 +74,11 @@ module.exports =
   #  - Event bubbling phase: Cursor position updated to clicked position.
   observeMouse: ->
     locationStack = []
-    locationCheckTimeoutID = null
+    @locationCheckTimeoutID = null
 
     checkLocationChangeAfter = (location, timeout) =>
-      clearTimeout(locationCheckTimeoutID)
-      locationCheckTimeoutID = setTimeout =>
-        locationCheckTimeoutID = null
+      clearTimeout(@locationCheckTimeoutID)
+      @locationCheckTimeoutID = setTimeout =>
         @checkLocationChange(location)
       , timeout
 
@@ -97,7 +97,7 @@ module.exports =
         checkLocationChangeAfter(location, 300)
 
     handleBubble = (event) =>
-      clearTimeout(locationCheckTimeoutID)
+      clearTimeout(@locationCheckTimeoutID)
       if location = locationStack.pop()
         setTimeout =>
           @checkLocationChange(location)
