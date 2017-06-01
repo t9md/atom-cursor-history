@@ -6,6 +6,33 @@ findEditorForPaneByURI = (pane, URI) ->
 
 module.exports =
 class History
+  serialize: ->
+    entries = []
+    for entry in @entries when entry.isValid()
+      entries.push(entry.serialize())
+
+    {
+      index: @index
+      entries: entries
+    }
+
+  @deserialize: (createLocation, state) ->
+    editorByURI = {}
+    complementEditor = (entry) ->
+      uri = entry.URI
+      entry.editor =
+        if uri of editorByURI
+          editorByURI[uri]
+        else
+          editorByURI[uri] = atom.workspace.paneForURI(uri)?.itemForURI(uri)
+      entry
+
+    entries = state.entries.map (entry) ->
+      Entry.deserialize(complementEditor(entry))
+
+    index = state.index
+    Object.assign(new History(createLocation), {index, entries})
+
   constructor: (@createLocation) ->
     @init()
     @configObserver = atom.config.observe 'cursor-history.keepSingleEntryPerBuffer', (newValue) =>

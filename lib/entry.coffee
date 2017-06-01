@@ -1,4 +1,4 @@
-{CompositeDisposable} = require 'atom'
+{CompositeDisposable, Point} = require 'atom'
 existsSync = null
 path = null
 
@@ -7,9 +7,18 @@ path = null
 #  For destroyed editor, use Point.
 module.exports =
 class Entry
+  serialize: ->
+    {
+      point: @point.serialize()
+      URI: @URI
+    }
+
+  @deserialize: (state) ->
+    new Entry(state.editor, Point.fromObject(state.point), state.URI)
+
   constructor: (editor, @point, @URI) ->
     @destroyed = false
-    return unless editor.isAlive()
+    return unless editor?.isAlive()
 
     @editor = editor
     @subscriptions = new CompositeDisposable
