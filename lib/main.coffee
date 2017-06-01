@@ -1,7 +1,3 @@
-{inspect} = require 'util'
-logLocation = (msg, loc) ->
-  # console.log msg, inspect(loc)
-
 {CompositeDisposable, Disposable} = require 'atom'
 History = null
 
@@ -77,16 +73,34 @@ module.exports =
   #  - Event bubbling phase: Cursor position updated to clicked position.
   observeMouse: ->
     locationStack = []
+    locationCheckTimeoutID = null
+
+    checkLocationChangeAfter = (location, timeout) =>
+      clearTimeout(locationCheckTimeoutID)
+      locationCheckTimeoutID = setTimeout =>
+        locationCheckTimeoutID = null
+        @checkLocationChange(location)
+      , timeout
+
     handleCapture = (event) ->
       if editor = closestTextEditorHavingURI(event.target)
-        loc = createLocation(editor, 'mousedown')
-        # logLocation('push', loc)
-        locationStack.push(loc)
+        location = createLocation(editor, 'mousedown')
+        locationStack.push(location)
+        # In case, mousedown event was not **bubbled** up, detect location change
+        # by comparing old and new location after 300ms
+        # This task is cancelled when mouse event bubbled up to avoid duplicate
+        # location check.
+        #
+        # E.g. hyperclick package open another file by mouseclick, it explicitly
+        # call `event.stopPropagation()` to prevent default mouse behavior of Atom.
+        # In such case we can't catch mouseclick event at bublling phase.
+        checkLocationChangeAfter(location, 300)
 
     handleBubble = (event) =>
-      if editor = closestTextEditorHavingURI(event.target)
+      clearTimeout(locationCheckTimeoutID)
+      if location = locationStack.pop()
         setTimeout =>
-          @checkLocationChange(locationStack.pop())
+          @checkLocationChange(location)
         , 100
 
     workspaceElement = atom.views.getView(atom.workspace)
@@ -137,7 +151,6 @@ module.exports =
     if editor.element.hasFocus() and (editor.getURI() is oldLocation.URI)
       # Move within same buffer.
       newLocation = createLocation(editor, oldLocation.type)
-      # logLocation('compare new', newLocation)
       oldPoint = oldLocation.point
       newPoint = newLocation.point
 
