@@ -129,26 +129,30 @@ describe "cursor-history", ->
           expect(getEntries('last')).toBeEqualEntry point: [2, 5], URI: pathSample1
 
   describe "go/back history with next/prev commands", ->
-    isInitialState = ->
+    isInitialStateOfBeforeHistoryInitialized = ->
       expect(main.history).not.toBeTruthy()
       expect(editor.getCursorBufferPosition()).toEqual [0, 0]
 
+    isInitialStateOfAfterHistoryInitialized = ->
+      expect(getEntries()).toHaveLength(0)
+      expect(editor.getCursorBufferPosition()).toEqual [0, 0]
+
     beforeEach ->
-      isInitialState()
+      isInitialStateOfBeforeHistoryInitialized()
 
     describe "when history is empty", ->
       it "do nothing with next", ->
         dispatchCommand(editorElement, 'cursor-history:next')
-        isInitialState()
+        isInitialStateOfAfterHistoryInitialized()
       it "do nothing with prev", ->
         dispatchCommand(editorElement, 'cursor-history:prev')
-        isInitialState()
+        isInitialStateOfAfterHistoryInitialized()
       it "do nothing with next-within-editor", ->
         dispatchCommand(editorElement, 'cursor-history:next-within-editor')
-        isInitialState()
+        isInitialStateOfAfterHistoryInitialized()
       it "do nothing with prev-within-editor", ->
         dispatchCommand(editorElement, 'cursor-history:prev-within-editor')
-        isInitialState()
+        isInitialStateOfAfterHistoryInitialized()
 
     describe "when history is not empty", ->
       [e0, e1, e2, e3, editor2, editorElement2] = []
