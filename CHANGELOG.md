@@ -1,4 +1,9 @@
-## 0.11.0: WIP
+## 0.11.0:
+- Improve: Now can track history for un-bubbled mouse click which cause open file. #32
+  - In previous release un-bubbled mouse event was not history trackable.
+  - This enhancement is to support hyperclick package's jump in mind.
+- New: History serialize/deserialization with normal Atom's serialization mechanism #33
+  - Thus history is maintained per project not per Atom-wide.
 - Meta: Add following tags in `keywords` section of package.json for better findability.
   - `jumplist`, `history`, `navigation`
 
