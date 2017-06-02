@@ -10,7 +10,7 @@ defaultIgnoreCommands = [
 ]
 
 closestTextEditorHavingURI = (target) ->
-  editor = target?.closest?('atom-text-editor')?.getModel()
+  editor = target?.closest?('atom-text-editor')?.getModel?()
   return editor if editor?.getURI()
 
 createLocation = (editor, type) ->
