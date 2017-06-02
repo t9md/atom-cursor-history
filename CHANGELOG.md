@@ -1,3 +1,7 @@
+## 0.11.1:
+- Fix: Guard incase closest('atom-text-editor') return non editor object #29
+  - E.g. Threw error when clicking close button of `mocha-test-runner` package, but no longer.
+  
 ## 0.11.0:
 - Improve: Now can track history for un-bubbled mouse click which cause open file. #32
   - In previous release un-bubbled mouse event was not history trackable.
