@@ -1,4 +1,4 @@
-## 0.12.0:
+## 0.12.0: [WIP]
 - Maintenance: Convert all code from CoffeeScript to JavaScript #35
 
 ## 0.11.1:
