@@ -13,8 +13,8 @@ No default keymap. You need to set by yourself.
 
 ```coffeescript
 'atom-workspace':
-  'ctrl-i':     'cursor-history:next'
-  'ctrl-o':     'cursor-history:prev'
+  'ctrl-i': 'cursor-history:next'
+  'ctrl-o': 'cursor-history:prev'
   'ctrl-cmd-i': 'cursor-history:next-within-editor'
   'ctrl-cmd-o': 'cursor-history:prev-within-editor'
 ```
