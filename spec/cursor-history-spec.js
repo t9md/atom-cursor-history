@@ -1,3 +1,4 @@
+"use babel"
 const {Point} = require("atom")
 const {
   it,
