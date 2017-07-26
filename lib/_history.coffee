@@ -31,9 +31,11 @@ class History
       Entry.deserialize(complementEditor(entry))
 
     index = state.index
-    Object.assign(new History(createLocation), {index, entries})
+    Object.assign(new this(createLocation), {index, entries})
 
   constructor: (@createLocation) ->
+    @flashMarker= null
+
     @init()
     @configObserver = atom.config.observe 'cursor-history.keepSingleEntryPerBuffer', (newValue) =>
       @uniqueByBuffer() if newValue
@@ -41,15 +43,18 @@ class History
   init: ->
     @index = 0
     @entries = []
+    return
 
   clear: ->
     entry.destroy() for entry in @entries
     @init()
+    return
 
   destroy: ->
     @configObserver.dispose()
     entry.destroy() for entry in @entries
-    [@index, @entries, @configObserver] = []
+    @index = @entries =@configObserver = null
+    return
 
   findValidIndex: (direction, {URI}={}) ->
     lastIndex = @entries.length - 1
@@ -69,12 +74,12 @@ class History
         return index if entry.URI is URI
       else
         return index
-    null
+    return null
 
   get: (direction, options={}) ->
     index = @findValidIndex(direction, options)
     if index?
-      @entries[@index=index]
+      return @entries[@index=index]
 
   isIndexAtHead: ->
     @index is @entries.length
@@ -153,6 +158,7 @@ class History
     if setIndexToHead ? true
       @removeInvalidEntries()
       @setIndexToHead()
+    return
 
   uniqueByBuffer: ->
     return unless @entries.length
@@ -165,6 +171,7 @@ class History
         buffers.push(URI)
     @removeInvalidEntries()
     @setIndexToHead()
+    return
 
   removeInvalidEntries: ->
     # Scrub invalid
@@ -177,6 +184,7 @@ class History
     if removeCount > 0
       removed = @entries.splice(0, removeCount)
       entry.destroy() for entry in removed
+    return
 
   inspect: (msg) ->
     ary =
@@ -184,13 +192,14 @@ class History
         s = if (i is @index) then "> " else "  "
         "#{s}#{i}: #{e.inspect()}"
     ary.push "> #{@index}:" if (@index is @entries.length)
-    ary.join("\n")
+    return ary.join("\n")
 
   log: (msg) ->
     console.log """
       # cursor-history: #{msg}
       #{@inspect()}\n\n
       """
+    return
 
   jump: (editor, direction, {withinEditor}={}) ->
     wasAtHead = @isIndexAtHead()
@@ -221,6 +230,8 @@ class History
       atom.workspace.open(URI, {searchAllPanes}).then (editor) =>
         @land(editor, point, direction, forceFlash: true, log: needToLog)
 
+    return
+
   land: (editor, point, direction, options={}) ->
     originalRow = editor.getCursorBufferPosition().row
     editor.setCursorBufferPosition(point, autoscroll: false)
@@ -232,8 +243,8 @@ class History
 
     if atom.config.get('cursor-history.debug') and options.log
       @log(direction)
+    return
 
-  flashMarker: null
   flash: (editor) ->
     @flashMarker?.destroy()
     cursorPosition = editor.getCursorBufferPosition()
@@ -241,11 +252,13 @@ class History
     decorationOptions = {type: 'line', class: 'cursor-history-flash-line'}
     editor.decorateMarker(@flashMarker, decorationOptions)
 
+    disposable = null
     destroyMarker = =>
-      disposable?.destroy()
+      disposable?.dispose()
       disposable = null
       @flashMarker?.destroy()
 
     disposable = editor.onDidChangeCursorPosition(destroyMarker)
     # [NOTE] animation-duration has to be shorter than this value(1sec)
     setTimeout(destroyMarker, 1000)
+    return

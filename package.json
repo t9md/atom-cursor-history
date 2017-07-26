@@ -11,7 +11,7 @@
   "repository": "https://github.com/t9md/atom-cursor-history",
   "license": "MIT",
   "engines": {
-    "atom": "^1.13.0-beta1"
+    "atom": "^1.18.0"
   },
   "configSchema": {
     "max": {
@@ -76,6 +76,13 @@
       "type": "boolean"
     }
   },
+  "scripts": {
+    "test": "apm test",
+    "watch": "fswatch -0 spec lib | xargs -0 -n1 -I{} apm test",
+    "prettier": "prettier --write --no-semi --print-width=100 --no-bracket-spacing --trailing-comma=es5 'lib/**/*.js' 'spec/*.js'"
+  },
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "prettier": "^1.5.3"
+  }
 }
