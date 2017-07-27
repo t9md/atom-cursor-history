@@ -1,5 +1,9 @@
 ## 0.12.0: [WIP]
 - Maintenance: Convert all code from CoffeeScript to JavaScript #35
+- Improve: Destroy duplicate entry(same position and same filePath) before jump.
+  - This situation happens when whole editor content was replaced such as `atom-prettier` package.
+  - This means `prettier:format` invalidate all history in that buffer.
+  - This invalidation is correct behavior in cursor-history stand point, keeping duplicate entries in history is more bad.
 
 ## 0.11.1:
 - Fix: Guard incase closest('atom-text-editor') return non editor object #29
