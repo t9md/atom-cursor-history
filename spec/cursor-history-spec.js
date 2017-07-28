@@ -33,7 +33,7 @@ global.beforeEach(function() {
 describe("cursor-history", () => {
   let editor, editorElement, main, pathSample1, pathSample2, fakeClock
 
-  const getEntries = function(which = null) {
+  function getEntries(which = null) {
     const {entries} = main.history
     switch (which) {
       case "last":
