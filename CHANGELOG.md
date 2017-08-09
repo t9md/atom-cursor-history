@@ -1,4 +1,7 @@
-## 0.12.0: [WIP]
+## 0.12.0:
+- New: Save history for unsaved editor #38
+  - Previously cursor-history package maintain cursor position history for the editor which have filePath on disk.
+  - From this version, remember history for temporal editor while that editor is alive(not be destroyed).
 - Maintenance: Convert all code from CoffeeScript to JavaScript #35
 - Improve: Destroy duplicate entry(same position and same filePath) before jump.
   - This situation happens when whole editor content was replaced such as `atom-prettier` package.
