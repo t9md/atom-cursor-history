@@ -3,7 +3,7 @@
 - Improve: Destroy duplicate entry(same position and same filePath) before jump.
   - This situation happens when whole editor content was replaced such as `atom-prettier` package.
   - This means `prettier:format` invalidate all history in that buffer.
-  - This invalidation is correct behavior in cursor-history stand point, keeping duplicate entries in history is more bad.
+  - This invalidation is correct behavior from cursor-history package's stand point, keeping duplicate entries in history is worse.
 
 ## 0.11.1:
 - Fix: Guard incase closest('atom-text-editor') return non editor object #29
