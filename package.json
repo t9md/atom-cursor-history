@@ -11,7 +11,7 @@
   "repository": "https://github.com/t9md/atom-cursor-history",
   "license": "MIT",
   "engines": {
-    "atom": "^1.18.0"
+    "atom": "^1.19.0"
   },
   "configSchema": {
     "max": {
