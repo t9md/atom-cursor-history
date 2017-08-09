@@ -7,6 +7,7 @@
   - This situation happens when whole editor content was replaced such as `atom-prettier` package.
   - This means `prettier:format` invalidate all history in that buffer.
   - This invalidation is correct behavior from cursor-history package's stand point, keeping duplicate entries in history is worse.
+- Support: Engine Atom v1.19.0 and above.
 
 ## 0.11.1:
 - Fix: Guard incase closest('atom-text-editor') return non editor object #29
