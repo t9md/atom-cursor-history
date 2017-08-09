@@ -1,14 +1,6 @@
 "use babel"
 const {Point} = require("atom")
-const {
-  it,
-  fit,
-  ffit,
-  fffit,
-  emitterEventPromise,
-  beforeEach,
-  afterEach,
-} = require("./async-spec-helpers")
+const {it, fit, ffit, fffit, emitterEventPromise, beforeEach, afterEach} = require("./async-spec-helpers")
 
 const setConfig = (param, value) => atom.config.set(`cursor-history.${param}`, value)
 
