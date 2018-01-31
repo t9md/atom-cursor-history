@@ -355,18 +355,13 @@ describe('cursor-history', () => {
     })
 
     describe('ignoreCommands setting', () => {
-      let editor2, editorElement2
       beforeEach(() => {
-        editorElement2 = null
         editor.setCursorBufferPosition([1, 2])
         expect(main.history).not.toBeTruthy()
         expect(editorElement.hasFocus()).toBe(true)
         atom.commands.add(editorElement, {
           'test:open-sample2' () {
-            atom.workspace.open(pathSample2).then(function (e) {
-              editor2 = e
-              editorElement2 = editor2.element
-            })
+            atom.workspace.open(pathSample2)
           }
         })
       })
