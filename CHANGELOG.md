@@ -1,3 +1,11 @@
+## 0.13.0: WIP
+- Improve: Tune flash duration from `0.5ms` to `0.8ms`.
+- Internal: Overhaul code for explicitness, readability #45.
+- Apply standard linter, code format rule #44.
+- Improve: `ctrl-o`, `ctrl-i` history navigation for column change within same row.
+  - It was not idempotent since `ctrl-o` add new entry and invalidate entry with same row.
+  - But now no longer destroy entry `ctrl-o` add case, so `ctrl-o`, `ctrl-i`, `ctrl-o` return to same position.
+
 ## 0.12.0:
 - New: Save history for unsaved editor #38
   - Previously cursor-history package maintain cursor position history for the editor which have filePath on disk.
