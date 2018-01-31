@@ -198,7 +198,7 @@ describe('cursor-history', () => {
         dispatchCommand(editorElement2, 'test:move-down-5')
         const entries = getEntries()
         expect(entries).toHaveLength(4)
-        expect(main.history.isIndexAtHead()).toBe(true)
+        expect(main.history.indexIsAtHead()).toBe(true)
         expect(getEditor().getURI()).toBe(pathSample2)
         expect(getEditor().getCursorBufferPosition()).toEqual([10, 0])
       })
@@ -347,7 +347,7 @@ describe('cursor-history', () => {
             dispatchCommand(editorElement2, 'test:move-up-5')
             const entries = getEntries()
             expect(entries).toHaveLength(2)
-            expect(main.history.isIndexAtHead()).toBe(true)
+            expect(main.history.indexIsAtHead()).toBe(true)
             expect(entries[1].URI).toBe(pathSample2)
             expect(entries[1].point).toEqual([10, 0])
           })
@@ -355,17 +355,13 @@ describe('cursor-history', () => {
     })
 
     describe('ignoreCommands setting', () => {
-      let editor2, editorElement2
       beforeEach(() => {
         editor.setCursorBufferPosition([1, 2])
         expect(main.history).not.toBeTruthy()
         expect(editorElement.hasFocus()).toBe(true)
         atom.commands.add(editorElement, {
           'test:open-sample2' () {
-            atom.workspace.open(pathSample2).then(function (e) {
-              editor2 = e
-              editorElement2 = editor2.element
-            })
+            atom.workspace.open(pathSample2)
           }
         })
       })
@@ -373,11 +369,9 @@ describe('cursor-history', () => {
       describe('ignoreCommands is empty', () => {
         it('save cursor position to history when editor lost focus', () => {
           setConfig('ignoreCommands', [])
-          runs(() => atom.commands.dispatch(editorElement, 'test:open-sample2'))
-          spyOn(main, 'checkLocationChange').andCallThrough()
-          waitsFor(() => main.checkLocationChange.callCount === 1)
           jasmine.useRealClock()
-          waitsFor(() => editorElement2.hasFocus() === true)
+          runs(() => atom.commands.dispatch(editorElement, 'test:open-sample2'))
+          waitsFor(() => main.history)
           runs(() => {
             expect(getEntries()).toHaveLength(1)
             expect(getEntries('last')).toBeEqualEntry({point: [1, 2], URI: pathSample1})
@@ -386,31 +380,25 @@ describe('cursor-history', () => {
       })
 
       describe('ignoreCommands is set and match command name', () => {
-        let locationStackLength = null
-        const dispatchOpenSample2Command = () => {
-          const promise = new Promise(resolve => {
-            atom.commands.onWillDispatch(({type}) => {
-              if (type === 'test:open-sample2') {
-                locationStackLength = main.locationStackForTestSpec.length
-                resolve()
+        const dispatchCommand = commandName => {
+          return new Promise(resolve => {
+            const disposable = atom.commands.onWillDispatch(({type}) => {
+              if (type === commandName) {
+                disposable.dispose()
+                resolve(main.trackedLocation)
               }
             })
+            atom.commands.dispatch(editorElement, commandName)
           })
-          atom.commands.dispatch(editorElement, 'test:open-sample2')
-          return promise
         }
 
-        beforeEach(() => (locationStackLength = null))
-
         it('track location change when editor lost focus', async () => {
-          await dispatchOpenSample2Command()
-          expect(locationStackLength).toBe(1)
+          expect(await dispatchCommand('test:open-sample2')).toBeTruthy()
         })
 
         it("Doesn't track location change when editor lost focus", async () => {
           setConfig('ignoreCommands', ['test:open-sample2'])
-          await dispatchOpenSample2Command()
-          expect(locationStackLength).toBe(0)
+          expect(await dispatchCommand('test:open-sample2')).toBeFalsy()
         })
       })
     })
