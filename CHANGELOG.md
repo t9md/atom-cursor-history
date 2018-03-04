@@ -1,3 +1,6 @@
+## 0.13.1:
+- Fix: Debug command `cursor-history:dump-history` no longer throw exception.
+
 ## 0.13.0:
 - Improve: Tune flash duration from `0.5ms` to `0.8ms`.
 - Internal: Overhaul code for explicitness, readability #45.
