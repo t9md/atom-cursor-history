@@ -1,3 +1,6 @@
+## 0.13.2:
+- Fix: mini editor was inappropriately saved as history and cause runtime exception. Now fixed.
+
 ## 0.13.1:
 - Fix: Debug command `cursor-history:dump-history` no longer throw exception.
 
