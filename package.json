@@ -53,10 +53,16 @@
       "order": 5,
       "type": "boolean"
     },
+    "pendingOpen": {
+      "default": false,
+      "description": "Opens an new editor [in a pending state](https://atom.io/docs/api/AtomEnvironment#instance-open)",
+      "order": 6,
+      "type": "boolean"
+    },
     "flashOnLand": {
       "default": true,
       "description": "flash cursor on land",
-      "order": 6,
+      "order": 7,
       "type": "boolean"
     },
     "ignoreCommands": {
@@ -67,12 +73,12 @@
         "type": "string"
       },
       "description": "list of commands to exclude from history tracking.",
-      "order": 7,
+      "order": 8,
       "type": "array"
     },
     "debug": {
       "default": false,
-      "order": 8,
+      "order": 9,
       "type": "boolean"
     }
   },
