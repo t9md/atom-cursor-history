@@ -55,7 +55,7 @@
     },
     "pendingOpen": {
       "default": false,
-      "description": "Opens an new editor [in a pending state](https://atom.io/docs/api/AtomEnvironment#instance-open)",
+      "description": "Opens an new editor [in a pending state](https://atom.io/docs/api/v1.39.1/Workspace#instance-open)",
       "order": 6,
       "type": "boolean"
     },
