@@ -53,9 +53,9 @@
       "order": 5,
       "type": "boolean"
     },
-    "pendingOpen": {
+    "openInPendingState": {
       "default": false,
-      "description": "Opens an new editor [in a pending state](https://atom.io/docs/api/v1.39.1/Workspace#instance-open)",
+      "description": "If the target location is not currently opened, open editor in pending-state (preview mode)",
       "order": 6,
       "type": "boolean"
     },
