@@ -1,3 +1,6 @@
+## 0.14.0:
+- New: `openInPendingState` config. When enabled, open new location in pending state(preview mode). Thank you @aviatesk! #48
+
 ## 0.13.2:
 - Fix: mini editor was inappropriately saved as history and cause runtime exception. Now fixed.
 
